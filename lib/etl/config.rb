@@ -11,7 +11,8 @@ module ETL
     include Singleton
     
     def initialize
-      @config_dir = File.expand_path('../../../etc', __FILE__)
+      dirpath = ENV['ETL_CONFIG_DIR'] || '../../../etc'
+      @config_dir = File.expand_path(dirpath, __FILE__)
     end
     
     def db_file
