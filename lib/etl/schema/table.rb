@@ -94,7 +94,7 @@ module ETL::Schema
       add_column(name, :date, nil, nil, &block)
     end
 
-    def defaultdate(name, dtype=GETDATE() &block)
+    def defaultdate(name, dtype=GETDATE(), &block)
       sym = "datetime default #{dtype}".to_sym
       add_column(name, sym, nil, nil, &block)
     end
