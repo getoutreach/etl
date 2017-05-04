@@ -16,7 +16,6 @@ module ETL::Output
       @conn = nil
       @conn_params = conn_params
       @bucket = @aws_params[:s3_bucket]
-      @redshift_role_arn = @conn_params[:role_arn]
     end
 
     def conn
@@ -26,7 +25,7 @@ module ETL::Output
     # Name of the destination table. By default we assume this is the class
     # name but you can override this in the parameters.
     def dest_table
-      @dest_table || 
+      @dest_table ||
         ETL::StringUtil::camel_to_snake(ETL::StringUtil::base_class_name(self.class.name))
     end
 
@@ -61,7 +60,7 @@ SQL
       conn.exec(sql)
     end
 
-    # Returns string that can be used as the database type given the 
+    # Returns string that can be used as the database type given the
     # ETL::Schema::Column object
     def col_type_str(col)
       case col.type
@@ -98,9 +97,9 @@ SQL
       sql =<<SQL
         COPY #{staging_table}
         FROM 's3://#{@bucket}/#{dest_table}'
-        IAM_ROLE '#{@redshift_role_arn}'
+        IAM_ROLE '#{@aws_params[:role_arn]}'
         DELIMITER ','
-        IGNOREHEADER 1 
+        IGNOREHEADER 1
         REGION '#{@aws_params[:region]}'
 SQL
 
@@ -137,9 +136,9 @@ SQL
       end
 
       # handle upsert/update
-      if [:update, :upsert].include?(@load_strategy)   
+      if [:update, :upsert].include?(@load_strategy)
         #get_primarykey
-        pks = schema.primary_key 
+        pks = schema.primary_key
 
         if pks.nil? || pks.empty?
           raise ETL::SchemaError, "Table '#{dest_table}' does not have a primary key"
@@ -157,7 +156,7 @@ SQL
 
         r = conn.exec(sql)
 
-        if @load_strategy == :upsert      
+        if @load_strategy == :upsert
           sql = <<SQL
           DELETE FROM #{dest_table}
           USING #{staging_table} s
@@ -174,7 +173,7 @@ SQL
           conn.exec(sql)
 
         # handle upsert(primary key is required)
-        elsif @load_strategy == :update     
+        elsif @load_strategy == :update
           #build query string for updating columns
           update_cols = schema.columns.keys
           pks.each do |pk|
@@ -199,9 +198,9 @@ SQL
         sql = <<SQL
         COPY #{@dest_table}
         FROM 's3://#{@bucket}/#{@dest_table}'
-        IAM_ROLE '#{@redshift_role_arn}'
+        IAM_ROLE '#{@aws_params[:role_arn]}'
         DELIMITER ','
-        IGNOREHEADER 1 
+        IGNOREHEADER 1
         REGION '#{@aws_params[:region]}'
 SQL
         log.debug(sql)
@@ -229,4 +228,3 @@ SQL
     end
   end
 end
-
