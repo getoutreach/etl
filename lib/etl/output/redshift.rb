@@ -102,7 +102,6 @@ SQL
         FROM 's3://#{@bucket}/#{tmp_table}'
         IAM_ROLE '#{@aws_params[:role_arn]}'
         DELIMITER ','
-        IGNOREHEADER 1
         REGION '#{@aws_params[:region]}'
 SQL
 
@@ -218,7 +217,6 @@ SQL
         FROM 's3://#{@bucket}/#{tmp_table}'
         IAM_ROLE '#{@aws_params[:role_arn]}'
         DELIMITER ','
-        IGNOREHEADER 1
         REGION '#{@aws_params[:region]}'
 SQL
         log.debug(sql)
