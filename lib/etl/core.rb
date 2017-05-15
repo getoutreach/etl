@@ -12,6 +12,7 @@ require 'etl/exception'
 
 # Utilities
 require 'etl/util/logger'
+require 'etl/util/metrics'
 require 'etl/util/hash_util'
 require 'etl/util/string_util'
 require 'etl/batch'
@@ -60,7 +61,11 @@ module ETL
     log.context = context.dup
     log
   end
-  
+
+  def ETL.create_metricser
+    ETL.create_class(:metrics)
+  end
+
   def ETL.queue
     @@queue ||= ETL.create_queue
   end
@@ -86,4 +91,4 @@ module ETL
       ETL::Job::Manager.load_job_classes(c)
     end
   end
-end  
+end
