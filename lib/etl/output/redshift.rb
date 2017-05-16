@@ -104,7 +104,7 @@ SQL
         COPY #{tmp_table}
         FROM 's3://#{@bucket}/#{tmp_table}'
         IAM_ROLE '#{@aws_params[:role_arn]}'
-        ACCEPTANYDATE
+        TIMEFORMAT AS 'auto'
         DELIMITER ','
         REGION '#{@aws_params[:region]}'
 SQL
@@ -220,7 +220,7 @@ SQL
         COPY #{@dest_table}
         FROM 's3://#{@bucket}/#{tmp_table}'
         IAM_ROLE '#{@aws_params[:role_arn]}'
-        ACCEPTANYDATE
+        TIMEFORMAT AS 'auto'
         DELIMITER ','
         REGION '#{@aws_params[:region]}'
 SQL
