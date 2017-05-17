@@ -244,7 +244,7 @@ SQL
         ::CSV.open(csv_file.path, "w") do |c|
           reader.each_row do |row|
             if !@header.nil?
-              s = @header.map{|k| row[k]}
+              s = @header.map{|k| row[k.to_s]}
               c << s unless s.nil?
             else
               c << row.values unless row.nil?
