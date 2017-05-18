@@ -88,7 +88,25 @@ module ETL
   # load all user job classes
   def ETL.load_user_classes
     if c = ETL.config.core[:job][:class_dir]
-      ETL::Job::Manager.load_job_classes(c)
+      load_class_dir(c)
+    end
+    if c = ETL.config.core[:default][:class_dir]
+      load_class_dir(c)
+    end
+  end
+
+  private
+
+  # Function to load external classes in the specified directory
+  def ETL.load_class_dir(class_dir)
+    unless class_dir.start_with?("/")
+      class_dir = ETL.root + "/" + class_dir
+    end
+    ::Dir.new(class_dir).each do |file|
+      next unless file =~ /\.rb$/
+      path = class_dir + "/" + file
+      ETL.logger.debug("Loading user file #{path}")
+      require path
     end
   end
 end
