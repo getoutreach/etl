@@ -26,7 +26,6 @@ RSpec.describe ETL::Metrics do
     end
 
     it 'writes a point with specific time' do
-
       expect(described_instance).to receive(:publish)
         .with(
           hash_including(
@@ -45,9 +44,7 @@ RSpec.describe ETL::Metrics do
     let(:thing) { double('timed thing') }
 
     it 'times a block' do
-      # allow(thing).to receive(:run)
       expect(thing).to receive(:run)
-
       expect(described_instance).to receive(:publish)
         .with(
           hash_including(
