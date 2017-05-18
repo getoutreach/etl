@@ -10,13 +10,13 @@ module ETL
       end
     end
 
-    def point(values, tags: {}, time: Time.now.utc)
+    def point(values, tags: {}, time: Time.now, type: :gauge)
       p = {
         series: @series,
         time: time,
         values: values,
         tags: tags,
-        type: :timer
+        type: type
       }
       publish(p)
     end
@@ -25,7 +25,7 @@ module ETL
       start_time = Time.now
       yield tags
       end_time = Time.now
-      point({ duration: end_time - start_time }, tags: tags, time: end_time)
+      point({ duration: end_time - start_time }, tags: tags, time: end_time, type: :timer)
     end
 
     protected
