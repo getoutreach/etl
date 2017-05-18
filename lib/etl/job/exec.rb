@@ -89,7 +89,7 @@ module ETL::Job
     end
 
     def metrics
-      @metrics ||= ETL.create_metricser
+      @metrics ||= ETL.create_metrics
     end
 
     def job_manager

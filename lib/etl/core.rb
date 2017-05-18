@@ -62,7 +62,7 @@ module ETL
     log
   end
 
-  def ETL.create_metricser
+  def ETL.create_metrics
     ETL.create_class(:metrics)
   end
 
