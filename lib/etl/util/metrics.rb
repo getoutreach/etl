@@ -1,13 +1,14 @@
+require 'json'
+
 module ETL
   # For reporting job & data metrics
   # TODO:
   # * report batch size or row count
   class Metrics
+    attr_reader :series
+
     def initialize(params = {})
       @series = params.fetch(:series)
-      @file = params[:file].tap do |f|
-        f ? File.new(f, 'w+') : STDOUT
-      end
     end
 
     def point(values, tags: {}, time: Time.now, type: :gauge)
@@ -31,7 +32,7 @@ module ETL
     protected
 
     def publish(point)
-      @file.puts(p)
+      puts(point.to_json)
     end
   end
 end
