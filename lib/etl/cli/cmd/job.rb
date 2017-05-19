@@ -8,12 +8,12 @@ module ETL::Cli::Cmd
         ETL.load_user_classes
         log.info("List of registered job IDs (classes):")
         ETL::Job::Manager.instance.job_classes.each do |id, klass|
-          puts(" * #{id} (#{klass.name.to_s})")
+          log.info("  * #{id} (#{klass.name.to_s})")
         end
       end
     end
 
-    class RunAll < ETL::Cli::Command
+    class EnqueueAll < ETL::Cli::Command
       parameter "REGEX", "Regular expression to match against job ID"
 
       def execute
@@ -90,6 +90,6 @@ module ETL::Cli::Cmd
     
     subcommand 'list', 'Lists all jobs registered with ETL system', Job::List
     subcommand 'run', 'Runs (or enqueues) specified jobs + batches', Job::Run
-    subcommand 'run-all', 'Enqueues multiple jobs matching a tag', Job::RunAll
+    subcommand 'enqueue-all', 'Enqueues multiple jobs matching a tag', Job::EnqueueAll
   end
 end
