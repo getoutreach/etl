@@ -4,17 +4,22 @@ module ETL::Cli::Cmd
   class Job < ETL::Cli::Command
     
     class List < ETL::Cli::Command
+      option ['-m', '--match'], "REGEX", "List only jobs matching regular expression",
+             attribute_name: :regex do |r| /#{r}/ end
+
       def execute
         ETL.load_user_classes
         log.info("List of registered job IDs (classes):")
-        ETL::Job::Manager.instance.job_classes.each do |id, klass|
-          log.info("  * #{id} (#{klass.name.to_s})")
+        ETL::Job::Manager.instance.job_classes.select do |id, klass|
+          id =~ regex
+        end.each do |id, klass|
+          puts(" * #{id} (#{klass.name.to_s})")
         end
       end
     end
 
     class EnqueueAll < ETL::Cli::Command
-      parameter "REGEX", "Regular expression to match against job ID"
+      parameter "REGEX", "Regular expression to match against job ID", required: false do |r| /#{r}/ end
 
       def execute
         ETL.load_user_classes
