@@ -18,47 +18,47 @@ module ETL::Cli::Cmd
       end
     end
 
-    class EnqueueAll < ETL::Cli::Command
-      parameter "REGEX", "Regular expression to match against job ID", required: false do |r| /#{r}/ end
-
-      def execute
-        ETL.load_user_classes
-        jobs = ETL::Job::Manager.instance.job_classes.select do |id, klass|
-          id =~ /#{regex}/
-        end
-
-        jobs.each do |id, klass|
-          batch_factory = klass.batch_factory_class.new
-          batch_factory.each do |b|
-            payload = ETL::Queue::Payload.new(id, b)
-            log.info("Enqueuing #{payload}")
-            ETL.queue.enqueue(payload)
-          end
-        end
-      end
-    end
-    
     class Run < ETL::Cli::Command
       parameter "JOB_ID", "ID of job we are running", required: true
-      
+
       option ['-b', '--batch'], "BATCH", "Batch for the job in JSON or 'key1=value1;key2=value2' format", attribute_name: :batch_str
       option ['-q', '--queue'], :flag, "Queue the job instead of running now"
+      option ['-m', '--match'], "REGEX", "Run only jobs matching regular expression"
       
       def execute
         ETL.load_user_classes
         
-        if @batch_str # user-specified batch
-          begin
-            batch = batch_factory.parse!(@batch_str)
-          rescue StandardError => ex
-            raise ArgumentError, "Invalid batch value specified (#{ex.message})" 
+        if match
+          if @batch_str
+            raise "Cannot pass batch with multiple jobs"
           end
-          run_batch(batch)
-        else # need to generate the batch(es) from the job
-          batch_factory.each do |b|
-            run_batch(b)
+
+          ETL::Job::Manager.instance.job_classes.select do |id, klass|
+            id =~ /#{regex}/
+          end.each do |id, klass|
+            batch_factory = klass.batch_factory_class.new
+            batch_factory.each do |b|
+              run_batch(b)
+            end
+          end
+        else
+          if @batch_str # user-specified batch
+            begin
+              batch = batch_factory.parse!(@batch_str)
+            rescue StandardError => ex
+              raise ArgumentError, "Invalid batch value specified (#{ex.message})"
+            end
+            run_batch(batch)
+          else # need to generate the batch(es) from the job
+            batch_factory.each do |b|
+              run_batch(b)
+            end
           end
         end
+      end
+
+      def run_multiple
+        ETL.load_user_classes
       end
       
       def job_class
