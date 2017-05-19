@@ -23,22 +23,34 @@ module ETL::Cli::Cmd
 
       option ['-b', '--batch'], "BATCH", "Batch for the job in JSON or 'key1=value1;key2=value2' format", attribute_name: :batch_str
       option ['-q', '--queue'], :flag, "Queue the job instead of running now"
-      option ['-m', '--match'], "REGEX", "Run only jobs matching regular expression"
+      option ['-m', '--match'], :flag, "Treat job ID as regular expression filter and run matching jobs"
       
       def execute
         ETL.load_user_classes
         
-        if match
+        if match?
           if @batch_str
             raise "Cannot pass batch with multiple jobs"
           end
 
           ETL::Job::Manager.instance.job_classes.select do |id, klass|
-            id =~ /#{regex}/
+            id =~ /#{job_id}/
           end.each do |id, klass|
-            batch_factory = klass.batch_factory_class.new
-            batch_factory.each do |b|
-              run_batch(b)
+            bf = klass.batch_factory_class.new
+            bf.each do |b|
+              payload = ETL::Queue::Payload.new(id, b)
+              if queue?
+                log.info("Enqueuing #{payload}")
+                ETL.queue.enqueue(payload)
+              else
+                log.info("Running #{payload}")
+                result = ETL::Job::Exec.new(payload).run
+                if result.success?
+                  log.info("SUCCESS: #{result.message}")
+                else
+                  log.error(result.message)
+                end
+              end
             end
           end
         else
@@ -95,6 +107,5 @@ module ETL::Cli::Cmd
     
     subcommand 'list', 'Lists all jobs registered with ETL system', Job::List
     subcommand 'run', 'Runs (or enqueues) specified jobs + batches', Job::Run
-    subcommand 'enqueue-all', 'Enqueues multiple jobs matching a tag', Job::EnqueueAll
   end
 end
