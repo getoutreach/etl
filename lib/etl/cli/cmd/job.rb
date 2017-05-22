@@ -31,14 +31,14 @@ module ETL::Cli::Cmd
         klasses = job_classes(job_id, match?)
         if @batch_str
           if match?
-            raise "Cannot pass batch with multiple jobs"
+            raise UsageError, "Cannot pass batch with multiple jobs"
           end
           _, klass = klasses.fetch(0)
           begin
             batch_factory = klass.batch_factory_class.new
             batch = batch_factory.parse!(@batch_str)
           rescue StandardError => ex
-            raise ArgumentError, "Invalid batch value specified (#{ex.message})"
+            raise UsageError, "Invalid batch value specified (#{ex.message})"
           end
           run_batch(job_id, batch)
         else
@@ -56,6 +56,8 @@ module ETL::Cli::Cmd
         if fuzzy
           ETL::Job::Manager.instance.job_classes.select do |id, klass|
             id =~ /#{job_expr}/
+          end.tap do |ks|
+            raise "Found no job IDs matching '#{job_expr}'" if ks.empty?
           end
         else
           klass = ETL::Job::Manager.instance.get_class(job_expr)
