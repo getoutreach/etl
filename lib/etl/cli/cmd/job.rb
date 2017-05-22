@@ -33,7 +33,7 @@ module ETL::Cli::Cmd
           if match?
             raise "Cannot pass batch with multiple jobs"
           end
-          _, klass = klasses.first
+          _, klass = klasses.fetch(0)
           begin
             batch_factory = klass.batch_factory_class.new
             batch = batch_factory.parse!(@batch_str)
@@ -71,7 +71,6 @@ module ETL::Cli::Cmd
 
       # enqueues or runs specified payload based on param setting
       def run_payload(payload)
-        puts payload
         if queue?
           log.info("Enqueuing #{payload}")
           ETL.queue.enqueue(payload)
