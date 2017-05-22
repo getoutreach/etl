@@ -39,17 +39,12 @@ module ETL::Cli::Cmd
           end
           run_batch(job_id, batch)
         else
-          bfs = batch_factories(job_id, match?)
-          bfs.each do
-            run_batch(job_id, b)
+          job_classes(job_id, match?).each do |id, klass|
+            batch_factory = klass.batch_factory_class.new
+            batch_factory.each do |batch|
+              run_batch(id, batch)
+            end
           end
-        end
-      end
-
-      def batch_factories(job_expr, fuzzy)
-        klasses = job_classes(job_expr, fuzzy)
-        bfs = klasses.map do |id|
-          batch_factory = klass.batch_factory_class.new
         end
       end
 
@@ -57,11 +52,11 @@ module ETL::Cli::Cmd
         if fuzzy
           ETL::Job::Manager.instance.job_classes.select do |id, klass|
             id =~ /#{job_expr}/
-          end.map(&:last)
+          end
         else
           klass = ETL::Job::Manager.instance.get_class(job_expr)
           raise "Failed to find specified job ID '#{job_expr}'" unless klass
-          [klass]
+          [[job_expr, klass]]
         end
       end
 
@@ -72,6 +67,7 @@ module ETL::Cli::Cmd
 
       # enqueues or runs specified payload based on param setting
       def run_payload(payload)
+        puts payload
         if queue?
           log.info("Enqueuing #{payload}")
           ETL.queue.enqueue(payload)
