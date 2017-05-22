@@ -39,38 +39,35 @@ module ETL::Cli::Cmd
           end
           run_batch(job_id, batch)
         else
-          bfs = batch_factories
+          bfs = batch_factories(job_id, match?)
           bfs.each do
-              run_batch(job_id, b)
+            run_batch(job_id, b)
           end
         end
-        
       end
 
-      def batch_factories(jobExpression, match)
-        ids = job_classes(jobExpression, match)
-        arrBatchFactories arr
-        ids.each do
+      def batch_factories(job_expr, fuzzy)
+        klasses = job_classes(job_expr, fuzzy)
+        bfs = klasses.map do |id|
           batch_factory = klass.batch_factory_class.new
-          arrBatchFactories.add(batch_factory)
         end
-        return arrBatchFactories
       end
-      #returns an array of ids
-      def job_classes(id, match)
-        if match
-        #Do regex match
+
+      def job_classes(job_expr, fuzzy)
+        if fuzzy
+          ETL::Job::Manager.instance.job_classes.select do |id, klass|
+            id =~ /#{job_expr}/
+          end.map(&:last)
         else
-          // Look for one.
-          ETL::Job::Manager.instance.get_class(id).tap do |klass|
-          raise "Failed to find specified job ID '#{id}'" unless klass
-        end
+          klass = ETL::Job::Manager.instance.get_class(job_expr)
+          raise "Failed to find specified job ID '#{job_expr}'" unless klass
+          [klass]
         end
       end
 
       # runs the specified batch
-      def run_batch(id, b)
-        run_payload(ETL::Queue::Payload.new(id, b))
+      def run_batch(id, batch)
+        run_payload(ETL::Queue::Payload.new(id, batch))
       end
 
       # enqueues or runs specified payload based on param setting
