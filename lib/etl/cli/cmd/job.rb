@@ -28,18 +28,22 @@ module ETL::Cli::Cmd
       def execute
         ETL.load_user_classes
 
+        klasses = job_classes(job_id, match?)
         if @batch_str
           if match?
             raise "Cannot pass batch with multiple jobs"
           end
+          _, klass = klasses.first
           begin
+            batch_factory = klass.batch_factory_class.new
             batch = batch_factory.parse!(@batch_str)
           rescue StandardError => ex
             raise ArgumentError, "Invalid batch value specified (#{ex.message})"
           end
           run_batch(job_id, batch)
         else
-          job_classes(job_id, match?).each do |id, klass|
+          # No batch string
+          klasses.each do |id, klass|
             batch_factory = klass.batch_factory_class.new
             batch_factory.each do |batch|
               run_batch(id, batch)
