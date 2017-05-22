@@ -28,40 +28,43 @@ module ETL::Cli::Cmd
       def execute
         ETL.load_user_classes
 
-        if match?
-          if @batch_str
+        if @batch_str
+          if match?
             raise "Cannot pass batch with multiple jobs"
           end
-
-          ETL::Job::Manager.instance.job_classes.select do |id, klass|
-            id =~ /#{job_id}/
-          end.each do |id, klass|
-            batch_factory = klass.batch_factory_class.new
-            batch_factory.each do |b|
-              run_batch(id, b)
-            end
+          begin
+            batch = batch_factory.parse!(@batch_str)
+          rescue StandardError => ex
+            raise ArgumentError, "Invalid batch value specified (#{ex.message})"
           end
+          run_batch(job_id, batch)
         else
-          klass = job_class(job_id)
-          batch_factory = klass.batch_factory_class.new
-          if @batch_str # user-specified batch
-            begin
-              batch = batch_factory.parse!(@batch_str)
-            rescue StandardError => ex
-              raise ArgumentError, "Invalid batch value specified (#{ex.message})"
-            end
-            run_batch(job_id, batch)
-          else # need to generate the batch(es) from the job
-            batch_factory.each do |b|
+          bfs = batch_factories
+          bfs.each do
               run_batch(job_id, b)
-            end
           end
         end
+        
       end
 
-      def job_class(id)
-        ETL::Job::Manager.instance.get_class(id).tap do |klass|
+      def batch_factories(jobExpression, match)
+        ids = job_classes(jobExpression, match)
+        arrBatchFactories arr
+        ids.each do
+          batch_factory = klass.batch_factory_class.new
+          arrBatchFactories.add(batch_factory)
+        end
+        return arrBatchFactories
+      end
+      #returns an array of ids
+      def job_classes(id, match)
+        if match
+        #Do regex match
+        else
+          // Look for one.
+          ETL::Job::Manager.instance.get_class(id).tap do |klass|
           raise "Failed to find specified job ID '#{id}'" unless klass
+        end
         end
       end
 
