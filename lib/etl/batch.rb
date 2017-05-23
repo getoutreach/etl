@@ -10,7 +10,6 @@ module ETL
     attr_accessor :start_time
     
     def initialize(h = {})
-      h = ETL::HashUtil::symbolize_keys(h)
       @hash = h.keys.sort.each_with_object({}) { |k, hash| hash[k] = h[k] }
       @start_time = nil
     end
