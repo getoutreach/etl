@@ -1,4 +1,5 @@
 require_relative '../command'
+require 'etl/job/exec'
 
 module ETL::Cli::Cmd
   class Job < ETL::Cli::Command
@@ -31,14 +32,14 @@ module ETL::Cli::Cmd
         klasses = job_classes(job_id, match?)
         if @batch_str
           if match?
-            raise UsageError, "Cannot pass batch with multiple jobs"
+            raise ETL::UsageError, "Cannot pass batch with multiple jobs"
           end
           _, klass = klasses.fetch(0)
           begin
             batch_factory = klass.batch_factory_class.new
             batch = batch_factory.parse!(@batch_str)
           rescue StandardError => ex
-            raise UsageError, "Invalid batch value specified (#{ex.message})"
+            raise ETL::UsageError, "Invalid batch value specified (#{ex.message})"
           end
           run_batch(job_id, batch)
         else
