@@ -60,7 +60,7 @@ RSpec.describe ETL::Cli::Cmd::Job::Run do
         end
       end
       context 'matching all' do
-        let(:job_expr) { '' }
+        let(:args) { ['--match'] }
         it 'runs all jobs' do
           expect(subject).to receive(:run_batch)
             .exactly(2).times
