@@ -23,10 +23,10 @@ RSpec.describe ETL::Cli::Cmd::Job::List do
   end
 
   context 'with a filter' do
-    let(:filter) { /days/ }
-    let(:args) { [filter] }
+    let(:filter) { 'days' }
+    let(:args) { ['--match', filter] }
     it 'lists matches' do
-      expect(STDOUT).to receive(:puts).with(filter)
+      expect(STDOUT).to receive(:puts).with(/ * #{filter}/)
       subject.execute
     end
   end
