@@ -31,7 +31,7 @@ module ETL::Input
                          60*60*24
                        end
 
-      @backfill_days = if keyword_args.include?(:backfill_days) && keyword_args[:backfill_days].is_a?(Integer)
+      @backfill_days = if keyword_args.include?(:backfill_days)
                       keyword_args[:backfill_days] 
                     else
                       30
