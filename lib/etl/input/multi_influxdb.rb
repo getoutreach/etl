@@ -31,8 +31,8 @@ module ETL::Input
                          60*60*24
                        end
 
-      @start_date = if keyword_args.include?(:start_date) && keyword_args[:start_date].is_a?(Integer)
-                      keyword_args[:start_date] 
+      @backfill_days = if keyword_args.include?(:backfill_days) && keyword_args[:backfill_days].is_a?(Integer)
+                      keyword_args[:backfill_days] 
                     else
                       30
                     end
@@ -105,12 +105,12 @@ EOS
         if !row.nil? && row[0]["columns"] && row[0]["values"]
           h = Hash[row[0]["columns"].zip(row[0]["values"][0])]
           oldest_date = Time.parse(h["time"])
-          if ( today - oldest_date ) <= 60*60*24*@start_date
+          if ( today - oldest_date ) <= 60*60*24*@backfill_days
             return oldest_date
           end
         end
       end
-      @today - 60*60*24*@start_date
+      @today - 60*60*24*@backfill_days
     end
     
     # Display connection string for this input
