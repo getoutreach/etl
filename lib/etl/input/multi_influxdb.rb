@@ -55,7 +55,7 @@ EOS
       if !field_keys.empty?
         measurement = field_keys.keys[0].to_s
         query = <<-EOS
-          select first(#{@measurement}) from #{@series}
+          select first(#{measurement}) from #{@series}
 EOS
         log.debug("Executing InfluxDB query #{query}")
         row = with_retry { conn.query(query, denormalize: false) } || []
