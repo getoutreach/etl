@@ -32,10 +32,10 @@ module ETL::Input
                        end
 
       @backfill_days = if keyword_args.include?(:backfill_days)
-                      keyword_args[:backfill_days] 
-                    else
-                      30
-                    end
+                         keyword_args[:backfill_days] 
+                       else
+                         30
+                       end
       @conn = nil
       @today = Time.now.getutc
     end
