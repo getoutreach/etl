@@ -85,7 +85,6 @@ module ETL::Schema
 
     def add_column(name, type, width, precision, &block)
       raise ETL::SchemaError, "Invalid nil type for column '#{name}'" if type.nil?
-      raise ETL::SchemaError, "Duplicate column name '#{name}'" if @columns.key?(name.to_s)
       t = Column.new(type, width, precision)
       @columns[name.to_s] = t
       yield t if block_given?

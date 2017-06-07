@@ -97,7 +97,7 @@ RSpec.describe ETL::Cli::Cmd::Job::Run do
       end
 
       context 'when no jobs are registered' do
-        let(:args) { ['--match'] }
+        let(:job_expr) { '' }
         before do
           allow(ETL::Job::Manager.instance).to receive(:job_classes).and_return([])
         end
