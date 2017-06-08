@@ -18,13 +18,11 @@ RSpec.describe "influxdb inputs" do
   let(:container) { 'influx_input_test' }
 
   before(:all) do
-    cmd = "docker run -d -t -p 8086:8086 --name influx_input_test influxdb:1.2"
-    system cmd
+    system "docker run -d -t -p 8086:8086 --name influx_input_test influxdb:1.2"
 
     sleep(0.5) # Give things a second to spin up.
 
-    cmd = "curl -X POST http://localhost:8086/query --data-urlencode \"q=CREATE DATABASE test\""
-    system cmd
+    system "curl -X POST http://localhost:8086/query --data-urlencode \"q=CREATE DATABASE test\""
   end
   
   before do
@@ -66,11 +64,9 @@ RSpec.describe "influxdb inputs" do
     # ideally we'd clean up the data points but we can't do that w/o admin
     # access. the reality is that the test will just keep overwriting the same
     # data so it's not a big problem
-    cmd = "docker stop influx_input_test"
-    system cmd
+    system "docker stop influx_input_test"
     
-    cmd = "docker rm influx_input_test"
-    system cmd
+    system "docker rm influx_input_test"
   end
 
   describe 'dummy parameters' do
