@@ -4,14 +4,32 @@ require 'etl/core'
 
 RSpec.describe "influxdb inputs" do
   
-  let(:dbconfig) { ETL.config.db[:influxdb] }
+  let (:dbconfig) {
+    { 
+      :port     => 8086,
+      :host     => "localhost",
+      :database => "test"
+    } 
+  }
+  #let(:dbconfig) { ETL.config.db[:influxdb] }
   let(:iql) { '' }
   let(:idb) { ETL::Input::Influxdb.new(dbconfig, iql) }
   let(:ts) { Time.parse('2015-01-10T23:00:50Z').utc } # changing this will break tests
   
   let(:series) { 'input_test' }
+
+  before(:all) do
+    cmd = "docker run -d -t -p 8086:8086 --name influx influxdb:1.2"
+    system cmd
+
+    sleep(0.5) # Give things a second to spin up.
+
+    cmd = "curl -X POST http://localhost:8086/query --data-urlencode \"q=CREATE DATABASE test\""
+    system cmd
+  end
   
   before do
+
     c = idb.conn
     
     data = [
@@ -45,10 +63,14 @@ RSpec.describe "influxdb inputs" do
     # 2015-01-10T23:01:35Z	blue	bar	6	3
   end
   
-  after do
+  after(:all) do
     # ideally we'd clean up the data points but we can't do that w/o admin
     # access. the reality is that the test will just keep overwriting the same
     # data so it's not a big problem
+    cmd = "docker stop influx"
+    system cmd
+    cmd = "docker rm influx"
+    system cmd
   end
 
   describe 'dummy parameters' do
