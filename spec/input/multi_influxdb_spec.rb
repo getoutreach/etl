@@ -110,7 +110,7 @@ RSpec.describe "influxdb inputs" do
   
   describe 'test database - aggregated by minute and check first three minutes' do
     let(:testoption) {
-      option.merge({ :group_by => ["time(1m)"], :where => " time > '2015-01-10T23:00:00Z' and time < '2015-01-10T23:03:00Z' "})
+      option.merge({ :group_by => ["time(1m)"], :where => " time > '2015-01-10T23:00:00Z' and time < '2015-01-10T23:03:00Z' ", :limit => 100})
     }
     let(:midb) { ETL::Input::MultiInfluxdb.new(dbconfig, ["sum(value) as v", "count(n) as n"], series, testoption) }
 
@@ -143,7 +143,7 @@ RSpec.describe "influxdb inputs" do
   
   describe 'test database - aggregated by color' do
     let(:testoption) {
-      option.merge({ :group_by => ["color"], :where => " time >= '2015-01-10T23:00:50Z' and time < '2015-01-30T23:01:10Z' "})
+      option.merge({ :group_by => ["color"], :where => " time >= '2015-01-10T23:00:50Z' and time < '2015-01-30T23:01:10Z' ", :limit => 100})
     }
     let(:midb) { ETL::Input::MultiInfluxdb.new(dbconfig, ["sum(value) as v", "sum(n) as n"], series, testoption) }
 
