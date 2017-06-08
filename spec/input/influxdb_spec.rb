@@ -11,15 +11,14 @@ RSpec.describe "influxdb inputs" do
       :database => "test"
     } 
   }
-  #let(:dbconfig) { ETL.config.db[:influxdb] }
   let(:iql) { '' }
   let(:idb) { ETL::Input::Influxdb.new(dbconfig, iql) }
   let(:ts) { Time.parse('2015-01-10T23:00:50Z').utc } # changing this will break tests
-  
   let(:series) { 'input_test' }
+  let(:container) { 'influx_input_test' }
 
   before(:all) do
-    cmd = "docker run -d -t -p 8086:8086 --name influx influxdb:1.2"
+    cmd = "docker run -d -t -p 8086:8086 --name influx_input_test influxdb:1.2"
     system cmd
 
     sleep(0.5) # Give things a second to spin up.
@@ -67,9 +66,10 @@ RSpec.describe "influxdb inputs" do
     # ideally we'd clean up the data points but we can't do that w/o admin
     # access. the reality is that the test will just keep overwriting the same
     # data so it's not a big problem
-    cmd = "docker stop influx"
+    cmd = "docker stop influx_input_test"
     system cmd
-    cmd = "docker rm influx"
+    
+    cmd = "docker rm influx_input_test"
     system cmd
   end
 
