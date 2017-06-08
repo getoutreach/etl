@@ -112,8 +112,6 @@ RSpec.describe "influxdb inputs" do
     it 'returns correct rows' do
       rows = []
       idb.each_row { |row| rows << row }
-
-      puts "rows #{rows}"
       expect(idb.rows_processed).to eq(3)
       
       expected = [
