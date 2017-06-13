@@ -1,0 +1,59 @@
+#!/usr/bin/env ruby
+
+require 'erb'
+require 'pathname'
+require 'optionparser'
+require 'fileutils'
+
+options = {}
+op = OptionParser.new do |opts|
+  opts.on('-o', '--output OUTPUT', "Output to directory") do |v|
+    options[:output] = v
+  end
+
+  opts.on('-i', '--input INPUT', "Input from directory") do |v|
+    options[:input] = v
+  end
+
+  opts.on('--job-dir JOB_DIR', "Job dir") do |v|
+    options[:job_dir] = v
+  end
+  opts.on('--redshift-password RPW', "Reshift pasword") do |v|
+    options[:redshift_password] = v
+  end
+  opts.on('--pagerduty-token PDT', "PD token") do |v|
+    options[:pagerduty_token] = v
+  end
+  opts.on('--database-password DBPW', "DB password") do |v|
+    options[:database_password] = v
+  end
+  opts.on('--influxdb-password IPW', "Influx password") do |v|
+    options[:influxdb_password] = v
+  end
+end
+op.parse!
+
+@job_dir = options.fetch(:job_dir)
+@redshift_password = options.fetch(:redshift_password)
+@pagerduty_token = options.fetch(:pagerduty_token)
+@database_password = options.fetch(:database_password)
+@influxdb_password = options.fetch(:influxdb_password)
+
+input_dir = Pathname.new(options.fetch(:input)).cleanpath
+output_dir = Pathname.new(options.fetch(:output)).cleanpath
+
+FileUtils.mkdir_p(output_dir)
+
+FILENAMES = [
+  'core',
+  # 'database', 'aws', 'redshift', 'pagerduty'
+]
+
+FILENAMES.each do |name|
+  template = File.open(input_dir / "#{name}.yml.erb", &:read)
+
+  File.open(output_dir / "#{name}.yml", 'w') do |f|
+    erb = ERB.new(template)
+    f.write(erb.result(binding))
+  end
+end
