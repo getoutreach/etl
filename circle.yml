@@ -22,5 +22,5 @@ test:
     - "$HOME/etl/bin/generate_config_files -i $HOME/etl/etc/erb_templates/ -o $HOME/config/ --job-dir $HOME/jobs":
   override:
     - 'bundle exec rspec --color --require spec_helper spec --format progress':
-      environment:
-        ETL_CONFIG_DIR: "$HOME/config"
+        environment:
+          ETL_CONFIG_DIR: "$HOME/config"
