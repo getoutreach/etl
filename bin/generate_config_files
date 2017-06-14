@@ -15,6 +15,10 @@ op = OptionParser.new do |opts|
     options[:input] = v
   end
 
+  opts.on('--class-dir DIR') do |v|
+    options[:class_dir] = v
+  end
+
   opts.on('--job-dir JOB_DIR', "Where the job things are") do |v|
     options[:job_dir] = v
   end
@@ -22,6 +26,7 @@ end
 op.parse!
 
 @job_dir = options.fetch(:job_dir)
+@class_dir = options.fetch(:class_dir)
 
 @redshift_password = ENV.fetch('REDSHIFT_PASSWORD')
 @database_password = ENV.fetch('DATABASE_PASSWORD')
