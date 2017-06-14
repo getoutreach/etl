@@ -15,8 +15,12 @@ test:
   pre:
     - mkdir "$HOME/jobs"        # Use an empty directory for jobs
     - mkdir "$HOME/config"
-    - "$HOME/etl/bin/generate_config_files -i $HOME/etl/etc/erb_templates/ -o $HOME/config/ --job-dir $HOME/jobs"
+    - "$HOME/etl/bin/generate_config_files -i $HOME/etl/etc/erb_templates/ -o $HOME/config/ --job-dir $HOME/jobs":
+      environment:
+        REDSHIFT_PASSWORD: "$REDSHIFT_PASSWORD"
+        INFLUXDB_PASSWORD: "$INFLUXDB_PASSWORD"
+        DATABASE_PASSWORD: "$DATABASE_PASSWORD"
   override:
     - 'bundle exec rspec --color --require spec_helper spec --format progress':
-        environment:
-          ETL_CONFIG_DIR: "$HOME/config"
+      environment:
+        ETL_CONFIG_DIR: "$HOME/config"
