@@ -15,29 +15,18 @@ op = OptionParser.new do |opts|
     options[:input] = v
   end
 
-  opts.on('--job-dir JOB_DIR', "Job dir") do |v|
+  opts.on('--job-dir JOB_DIR', "Where the job things are") do |v|
     options[:job_dir] = v
-  end
-  opts.on('--redshift-password RPW', "Reshift pasword") do |v|
-    options[:redshift_password] = v
-  end
-  opts.on('--pagerduty-token PDT', "PD token") do |v|
-    options[:pagerduty_token] = v
-  end
-  opts.on('--database-password DBPW', "DB password") do |v|
-    options[:database_password] = v
-  end
-  opts.on('--influxdb-password IPW', "Influx password") do |v|
-    options[:influxdb_password] = v
   end
 end
 op.parse!
 
 @job_dir = options.fetch(:job_dir)
-@redshift_password = options.fetch(:redshift_password)
-@pagerduty_token = options.fetch(:pagerduty_token)
-@database_password = options.fetch(:database_password)
-@influxdb_password = options.fetch(:influxdb_password)
+
+@redshift_password = ENV.fetch('REDSHIFT_PASSWORD')
+@pagerduty_token   = ENV.fetch('PAGERDUTY_TOKEN')
+@database_password = ENV.fetch('DATABASE_PASSWORD')
+@influxdb_password = ENV.fetch('INFLUXDB_PASSWORD')
 
 input_dir = Pathname.new(options.fetch(:input)).cleanpath
 output_dir = Pathname.new(options.fetch(:output)).cleanpath
@@ -45,8 +34,7 @@ output_dir = Pathname.new(options.fetch(:output)).cleanpath
 FileUtils.mkdir_p(output_dir)
 
 FILENAMES = [
-  'core',
-  # 'database', 'aws', 'redshift', 'pagerduty'
+  'core', 'database', 'aws', 'redshift', 'pagerduty'
 ]
 
 FILENAMES.each do |name|
