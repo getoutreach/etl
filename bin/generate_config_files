@@ -24,7 +24,6 @@ op.parse!
 @job_dir = options.fetch(:job_dir)
 
 @redshift_password = ENV.fetch('REDSHIFT_PASSWORD')
-@pagerduty_token   = ENV.fetch('PAGERDUTY_TOKEN')
 @database_password = ENV.fetch('DATABASE_PASSWORD')
 @influxdb_password = ENV.fetch('INFLUXDB_PASSWORD')
 
