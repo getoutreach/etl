@@ -32,10 +32,7 @@ output_dir = Pathname.new(options.fetch(:output)).cleanpath
 
 FileUtils.mkdir_p(output_dir)
 
-FILENAMES = [
-  'core', 'database', 'aws', 'redshift', 'pagerduty'
-]
-
+FILENAMES = ['core', 'database', 'aws', 'redshift']
 FILENAMES.each do |name|
   template = File.open(input_dir / "#{name}.yml.erb", &:read)
 
