@@ -83,11 +83,11 @@ module ETL::Job
         
         # we aren't retrying anymore - log this error
         jr.exception(ex)
-        @notifier.ping "#{@payload.job_id} faied: DatabaseError #{ex}" unless @notifier.nil?
+        @notifier.ping "#{@payload.job_id} failed: DatabaseError #{ex}" unless @notifier.nil?
       rescue StandardError => ex
         # for all other exceptions: save the message
         jr.exception(ex)
-        @notifier.ping "#{@payload.job_id} faied: #{ex}" unless @notifier.nil?
+        @notifier.ping "#{@payload.job_id} failed: #{ex}" unless @notifier.nil?
       end
 
       metrics.point(
