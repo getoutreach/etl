@@ -16,7 +16,12 @@
 !/log/.keep
 /tmp
 
+# Ignore all config files/templates except circle.yml 
 *.yml
+/etc/*.yml
+/etc/*.yml.template
+/spec/etc/*.yml
+!circle.yml
 
 # Editor stuff
 .*.sw[op]
