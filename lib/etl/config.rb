@@ -54,6 +54,16 @@ module ETL
       @influx
     end
 
+    def datasources_file
+      @config_dir + "/datasources.yml"
+    end
+    
+    def datasources(&b)
+      @datasources ||= self.class.load_file(datasources_file)
+      yield @datasources if block_given?
+      @datasources
+    end
+
     def core_file
       @config_dir + "/core.yml"
     end
