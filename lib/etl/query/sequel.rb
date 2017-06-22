@@ -40,6 +40,7 @@ module ETL::Query
                   end
       @limit = limit 
       @offset = nil
+      @offset_repeat = 0
     end
 
     def query
@@ -79,7 +80,7 @@ module ETL::Query
         if limit.empty?
           limit = " LIMIT #{@offset}"
         end
-        offset = " OFFSET #{@offset}"
+        offset = " OFFSET #{@offset*@offset_repeat}"
       end
 
       "SELECT #{select} FROM #{@from}#{where}#{group_by}#{limit}#{offset}"
@@ -111,10 +112,12 @@ module ETL::Query
     def set_offset(offset)
       raise "Parameter is not integer" if !offset.is_a?(Integer)
       @offset = offset 
+      @offset_repeat += 1
     end
 
     def cancel_offset
       @offset = nil 
+      @offset_repeat = 0 
     end
   end
 end
