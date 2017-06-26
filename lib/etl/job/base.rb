@@ -8,8 +8,9 @@ module ETL::Job
     
     attr_reader :batch
     
-    def initialize(b)
+    def initialize(b, backfill_date: nil)
       @batch = b
+      @backfill_date = backfill_date
     end
     
     # Registers a job class with the manager. This is typically called by
@@ -23,7 +24,11 @@ module ETL::Job
     # and then running the output class for this batch
     def run
       # set up our input object
-      inp = input
+      inp = if backfill.nil?
+              input
+            else
+              input(@backfill_date)
+            end
       inp.log = log
       log.debug("Input: #{inp.name}")
       

@@ -25,6 +25,7 @@ module ETL::Cli::Cmd
       option ['-b', '--batch'], "BATCH", "Batch for the job in JSON or 'key1=value1;key2=value2' format", attribute_name: :batch_str
       option ['-q', '--queue'], :flag, "Queue the job instead of running now"
       option ['-m', '--match'], :flag, "Treat job ID as regular expression filter and run matching jobs"
+      option ['--backfill'], "Backfill", "Backfill data from the day in format YYYY-MM-DD", attribute_name: :backfill_date
 
       def execute
         ETL.load_user_classes
@@ -44,6 +45,7 @@ module ETL::Cli::Cmd
           run_batch(job_id, batch)
         else
           # No batch string
+
           klasses.each do |id, klass|
             batch_factory = klass.batch_factory_class.new
             batch_factory.each do |batch|
@@ -73,7 +75,8 @@ module ETL::Cli::Cmd
       end
 
       # runs the specified batch
-      def run_batch(id, batch)
+      def run_batch(id, batch, option:nil)
+        batch[:backfill_date] = @backfill_date if @backfill_date 
         run_payload(ETL::Queue::Payload.new(id, batch))
       end
 
