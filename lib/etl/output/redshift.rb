@@ -62,7 +62,7 @@ SQL
       schema.columns.each do |name, column|
         column_type = col_type_str(column)
         column_statement = "\"#{name}\" #{column_type}"
-        column_statement += " NOT NULL" if primary_keys.include?(name) || dist_keys.include?(name) || sort_keys.include?(name)
+        column_statement += " NOT NULL" if primary_keys.include?(name.to_sym)
           
         type_ary << column_statement
       end
