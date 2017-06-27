@@ -6,7 +6,7 @@ module ETL::Job
   class Base
     include ETL::CachedLogger
     
-    attr_reader :batch
+    attr_reader :batch, :backfill_date
     
     def initialize(b, backfill_date: nil)
       @batch = b
@@ -24,11 +24,7 @@ module ETL::Job
     # and then running the output class for this batch
     def run
       # set up our input object
-      inp = if backfill.nil?
-              input
-            else
-              input(@backfill_date)
-            end
+      inp = input
       inp.log = log
       log.debug("Input: #{inp.name}")
       

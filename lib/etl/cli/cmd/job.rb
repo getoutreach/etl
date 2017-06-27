@@ -45,7 +45,6 @@ module ETL::Cli::Cmd
           run_batch(job_id, batch)
         else
           # No batch string
-
           klasses.each do |id, klass|
             batch_factory = klass.batch_factory_class.new
             batch_factory.each do |batch|
@@ -75,19 +74,26 @@ module ETL::Cli::Cmd
       end
 
       # runs the specified batch
-      def run_batch(id, batch, option:nil)
-        batch[:backfill_date] = @backfill_date if @backfill_date 
-        run_payload(ETL::Queue::Payload.new(id, batch))
+      def run_batch(id, batch)
+        param = {}
+        if @backfill_date
+          begin
+            param[:backfill_date] = Time.parse(@backfill_date)
+          rescue ArgumentError => ex
+            raise ETL::UsageError, "Invalid backfill_date value specified (#{ex.message})"
+          end
+        end
+        run_payload(ETL::Queue::Payload.new(id, batch), param)
       end
 
       # enqueues or runs specified payload based on param setting
-      def run_payload(payload)
+      def run_payload(payload, param={})
         if queue?
           log.info("Enqueuing #{payload}")
-          ETL.queue.enqueue(payload)
+          ETL.queue.enqueue(payload, param)
         else
           log.info("Running #{payload}")
-          result = ETL::Job::Exec.new(payload).run
+          result = ETL::Job::Exec.new(payload, param).run
           if result.success?
             log.info("SUCCESS: #{result.message}")
           else
