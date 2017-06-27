@@ -171,7 +171,7 @@ SQL
       end
 
       # handle upsert/update
-      if [:update, :upsert].include?(@load_strategy)
+      if [:update, :upsert, :merge].include?(@load_strategy)
         #get_primarykey
         pks = schema.primary_key
 

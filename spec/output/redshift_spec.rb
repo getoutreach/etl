@@ -32,7 +32,7 @@ end
 
 class TestRedshiftLoad1 < ETL::Output::Redshift
   def initialize(input, load_strategy, table_name)
-    super(load_strategy, rspec_redshift_params, rspec_aws_params)
+    super(load_strategy, rspec_redshift_params, rspec_aws_params, ["day", "id", "value", "dw_created", "dw_updated"])
     @dest_table = table_name
     @reader = input
 
@@ -479,5 +479,67 @@ SQL
     expect(jr.rows_processed).to eq(0)
     expect(job).not_to receive(:upload_to_s3)
     expect(job).not_to receive(:load_from_s3)
+  end
+
+  it "redshift - merge" do
+    table_name = "test_2"
+    conn = init_conn_table(table_name)
+
+    batch = ETL::Batch.new({ :day => "2015-04-02" })
+
+    d1 = "2015-02-03 12:34:56"
+    d2 = "2015-02-04 01:23:45"
+
+    data = []
+    data.push(["day", "id", "value", "dw_created", "dw_updated"])
+    data.push(["2015-04-01", 10, 1, d1, d2])
+    data.push(["2015-04-01", 11, 2, d1, d2])
+    data.push(["2015-04-02", 11, 3, d1, d2])
+    data.push(["2015-04-02", 12, 4, d1, d2])
+    data.push(["2015-04-02", 13, 5, d1, d2])
+    data.push(["2015-04-03", 10, 6, d1, d2])
+
+    make_csv('/tmp/test2.txt', data)
+    input = ETL::Input::CSV.new('/tmp/test2.txt')
+
+    job = TestRedshiftLoad1.new(input, :upsert, table_name)
+    job.schema.primary_key = [:day, :id]
+    job.batch = batch
+    jr = job.run
+
+    data = []
+    data.push(["day", "id", "value", "dw_created", "dw_updated"])
+    data.push(["2015-04-01", 10, 1, d1, d2])
+    data.push(["2015-04-01", 11, 2, d1, d2])
+    data.push(["2015-04-02", 14, 11, d1, d2])
+    data.push(["2015-04-02", 11, 3, d1, d2])
+
+    make_csv('/tmp/test2.txt', data)
+    input = ETL::Input::CSV.new('/tmp/test2.txt')
+
+    job = TestRedshiftLoad1.new(input, :merge, table_name)
+    job.batch = batch
+    jr = job.run
+
+    sql =<<SQL
+select to_char(day, 'YYYY-MM-DD HH24:MI:SS') as day
+  , id
+  , value
+from #{table_name} 
+order by day, id, value
+SQL
+    result = conn.exec(sql)
+
+    exp_values = [
+      ["2015-04-01 00:00:00", "10", "1"],
+      ["2015-04-01 00:00:00", "11", "2"],
+      ["2015-04-02 00:00:00", "11", "3"],
+      ["2015-04-02 00:00:00", "12", "4"],
+      ["2015-04-02 00:00:00", "13", "5"],
+      ["2015-04-02 00:00:00", "14", "11"],
+      ["2015-04-03 00:00:00", "10", "6"]
+    ]
+
+    compare_db_results(exp_values, result)
   end
 end
