@@ -5,7 +5,6 @@ module ETL::Schema
   class Column
     attr_accessor :type, :width, :precision
 
-    # keys : :primary, :sort, :dist
     def initialize(type, width = nil, precision = nil)
       @type = type.to_sym()
       @width = width
