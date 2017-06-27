@@ -132,8 +132,8 @@ module ETL::Schema
       @sort_key.push(column)
     end
 
-    def set_primarykey(pks)
-      @primary_key = pks 
+    def add_primarykey(pks)
+      @primary_key.push(pks) 
     end
 
   end
