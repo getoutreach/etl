@@ -25,6 +25,7 @@ module ETL::Cli::Cmd
       option ['-b', '--batch'], "BATCH", "Batch for the job in JSON or 'key1=value1;key2=value2' format", attribute_name: :batch_str
       option ['-q', '--queue'], :flag, "Queue the job instead of running now"
       option ['-m', '--match'], :flag, "Treat job ID as regular expression filter and run matching jobs"
+      option ['--backfill'], "Backfill", "Backfill data from the day in format YYYY-MM-DD", attribute_name: :backfill_date
 
       def execute
         ETL.load_user_classes
@@ -74,17 +75,25 @@ module ETL::Cli::Cmd
 
       # runs the specified batch
       def run_batch(id, batch)
-        run_payload(ETL::Queue::Payload.new(id, batch))
+        param = {}
+        if @backfill_date
+          begin
+            param[:backfill_date] = Time.parse(@backfill_date)
+          rescue ArgumentError => ex
+            raise ETL::UsageError, "Invalid backfill_date value specified (#{ex.message})"
+          end
+        end
+        run_payload(ETL::Queue::Payload.new(id, batch), param)
       end
 
       # enqueues or runs specified payload based on param setting
-      def run_payload(payload)
+      def run_payload(payload, param={})
         if queue?
           log.info("Enqueuing #{payload}")
-          ETL.queue.enqueue(payload)
+          ETL.queue.enqueue(payload, param)
         else
           log.info("Running #{payload}")
-          result = ETL::Job::Exec.new(payload).run
+          result = ETL::Job::Exec.new(payload, param).run
           if result.success?
             log.info("SUCCESS: #{result.message}")
           else

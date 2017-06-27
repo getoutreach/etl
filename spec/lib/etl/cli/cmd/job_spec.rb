@@ -125,5 +125,26 @@ RSpec.describe ETL::Cli::Cmd::Job::Run do
         end
       end
     end
+
+    context 'with --backfill' do
+      let(:backfill_date) { '2017/06/26' }
+      let(:invalid_backfill_date) { 'invalid_backfill_date' }
+      let(:error_message ) { "Invalid backfill_date value specified (no time information in \"#{invalid_backfill_date}\")" }
+
+      context 'when invalid argument' do
+        let(:args) { ['--backfill', invalid_backfill_date].concat(super()) }
+        it 'raise error' do
+          expect{ subject.execute }.to raise_error(error_message)
+        end
+      end
+
+      context 'when valid argument' do
+        let(:args) { ['--backfill', backfill_date].concat(super()) }
+        it 'run job with backfill_date' do
+          expect(subject).to receive(:run_payload).with(anything, {:backfill_date => Time.parse(backfill_date) })
+          subject.execute
+        end
+      end
+    end
   end
 end

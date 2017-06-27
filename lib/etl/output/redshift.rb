@@ -155,6 +155,8 @@ SQL
         # don't delete anything
       when :upsert
         # don't delete anything
+      when :merge
+        #overwrite all of the columns in the target table by replacing the existing rows
       when :insert_append
         # don't delete anything
       when :insert_table
@@ -169,7 +171,7 @@ SQL
       end
 
       # handle upsert/update
-      if [:update, :upsert].include?(@load_strategy)
+      if [:update, :upsert, :merge].include?(@load_strategy)
         #get_primarykey
         pks = schema.primary_key
 
@@ -222,6 +224,24 @@ SQL
 
           log.debug(sql)
           conn.exec(sql)
+
+        #overwrite all of the columns in the target table by replacing the existing rows
+        elsif @load_strategy == :merge
+          sql = <<SQL
+          DELETE FROM #{dest_table}
+          USING #{tmp_table} s
+          WHERE #{@header.collect{ |h| "#{dest_table}.#{h} = s.#{h}" }.join(" and ")}
+SQL
+          log.debug(sql)
+          conn.exec(sql)
+
+          sql = <<SQL
+          INSERT INTO #{dest_table}
+          SELECT * FROM #{tmp_table}
+SQL
+          log.debug(sql)
+          conn.exec(sql)
+
         end
 
       else

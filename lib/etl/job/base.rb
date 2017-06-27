@@ -6,10 +6,11 @@ module ETL::Job
   class Base
     include ETL::CachedLogger
     
-    attr_reader :batch
+    attr_reader :batch, :backfill_date
     
-    def initialize(b)
+    def initialize(b, backfill_date: nil)
       @batch = b
+      @backfill_date = backfill_date
     end
     
     # Registers a job class with the manager. This is typically called by
