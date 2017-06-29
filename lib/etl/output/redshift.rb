@@ -53,12 +53,6 @@ SQL
                    end
     end
 
-    # Returns the default schema based on the table in the destination db
-    def default_schema
-      return nil unless table_schema
-      ETL::Schema::Table.from_redshift_schema(table_schema.values)
-    end
-
     # create dest table if it doesn't exist
     def create_table_schema
       type_ary = []
