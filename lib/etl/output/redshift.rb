@@ -19,7 +19,6 @@ module ETL::Output
       @bucket = @aws_params[:s3_bucket]
       @random_key = [*('a'..'z'),*('0'..'9')].shuffle[0,10].join
       @header = header
-      puts "@header #{@header}"
     end
 
     def csv_file 

@@ -251,7 +251,6 @@ SQL
     jr = job.run
 
     result = conn.exec("select to_char(day, 'YYYY-MM-DD HH24:MI:SS') as day, attribute from #{table_name} order by day asc")
-    puts "result #{result.values}"
     
     exp_values = [
       ["2015-04-01 00:00:00", "rain"],
