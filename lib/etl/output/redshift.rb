@@ -19,6 +19,7 @@ module ETL::Output
       @bucket = @aws_params[:s3_bucket]
       @random_key = [*('a'..'z'),*('0'..'9')].shuffle[0,10].join
       @header = header
+      puts "@header #{@header}"
     end
 
     def csv_file 
@@ -45,15 +46,28 @@ module ETL::Output
       dest_table+"_"+@random_key
     end
 
+    # If the table exists, use the order of columns. Otherwise, use @header
+    def columns
+      @columns ||= if schemas && !schemas.values.empty?
+                     schemas.map { |column| column["column"] }
+                    elsif @header
+                     @header
+                    end
+    end
+
+    def schemas
+      @schemas ||= if dest_table && conn
+                     sql = <<SQL
+        SELECT "column", type FROM pg_table_def WHERE tablename = '#{dest_table}'
+SQL
+                     exec_query(sql)
+                   end
+    end
+
     # Returns the default schema based on the table in the destination db
     def default_schema
-      return nil unless dest_table && conn
-      sql = <<SQL
-      SELECT "column", type, distkey, sortkey FROM pg_table_def WHERE tablename = '#{dest_table}'
-SQL
-      redshift_schema = conn.exec(sql)
-
-      ETL::Schema::Table.from_redshift_schema(redshift_schema.values)
+      return nil unless schemas
+      ETL::Schema::Table.from_redshift_schema(schemas.values)
     end
 
     # create dest table if it doesn't exist
@@ -287,8 +301,8 @@ SQL
         # Load data into temp csv
         ::CSV.open(csv_file.path, "w") do |c|
           reader.each_row do |row|
-            if !@header.nil?
-              s = @header.map{|k| row[k.to_s]}
+            if columns 
+              s = columns.map{|k| row[k.to_s]}
               if !s.nil?
                 c << s
                 rows_processed += 1

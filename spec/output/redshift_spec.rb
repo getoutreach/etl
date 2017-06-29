@@ -10,8 +10,8 @@ end
   
 # Test loading into Redshift
 class TestRedshiftCreate1 < ETL::Output::Redshift
-  def initialize(input, table_name)
-    super(:insert_append, rspec_redshift_params, rspec_aws_params) 
+  def initialize(input, table_name, header=nil)
+    super(:insert_append, rspec_redshift_params, rspec_aws_params, header) 
     @dest_table = table_name 
     @reader = input
     #@csv_file = "#{ETL.root}/spec/data/simple1.csv"
@@ -198,6 +198,34 @@ SQL
     return conn
   end
 
+  it "redshift - schema" do
+    table_name = "test_1"
+    header = ["build_number", "name", "count", "total", "average"]
+    sql = <<SQL
+drop table if exists #{table_name};
+SQL
+    get_conn().exec(sql)
+
+    input = ETL::Input::CSV.new("#{ETL.root}/spec/data/simple1.csv")
+    job = TestRedshiftCreate1.new(input, table_name, header)
+    expect( job.columns ).to eq(header)
+
+    # Create destination table
+    sql = <<SQL
+drop table if exists #{table_name};
+create table #{table_name} (
+  day timestamp, 
+  attribute varchar, 
+  value_int int, 
+  value_num numeric(10, 1), 
+  value_float float);
+SQL
+    conn = init_conn_table(table_name)
+    conn.exec(sql)
+    job = TestRedshiftCreate1.new(input, table_name)
+    expect( job.columns ).to eq(["day", "attribute", "value_int", "value_num", "value_float"])
+  end
+
   it "redshift - insert from s3" do
     table_name = "test_1"
     conn = init_conn_table(table_name)
@@ -207,7 +235,7 @@ SQL
 drop table if exists #{table_name};
 create table #{table_name} (
   day timestamp, 
-  condition varchar, 
+  attribute varchar, 
   value_int int, 
   value_num numeric(10, 1), 
   value_float float);
@@ -222,7 +250,8 @@ SQL
     job.batch = batch
     jr = job.run
 
-    result = conn.exec("select to_char(day, 'YYYY-MM-DD HH24:MI:SS') as day, condition from #{table_name} order by day asc")
+    result = conn.exec("select to_char(day, 'YYYY-MM-DD HH24:MI:SS') as day, attribute from #{table_name} order by day asc")
+    puts "result #{result.values}"
     
     exp_values = [
       ["2015-04-01 00:00:00", "rain"],
