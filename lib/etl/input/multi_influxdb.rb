@@ -12,7 +12,7 @@ module ETL::Input
   # Client lib: https://github.com/influxdata/influxdb-ruby
     include ETL::InfluxdbConn
     
-    attr_accessor :params
+    attr_accessor :params, :input_end_time
 
     # start_date : integer representing # days we gonna go back (default is 30)
     # time_interval : integer representing seconds (default is 1d (60*60*24))
@@ -48,12 +48,12 @@ module ETL::Input
                        end
       @conn = nil
       @input_end_time = if keyword_args.include?(:today)
-                 today = keyword_args[:today].to_s 
-                 today += " UTC" unless today.include? "UTC"
-                 Time.parse(today)
-               else
-                 Time.now.getutc
-               end 
+                          today = keyword_args[:today].to_s 
+                          today += " UTC" unless today.include? "UTC"
+                          Time.parse(today)
+                        else
+                          Time.now.getutc
+                        end 
     end
 
     def slack_tags
@@ -157,12 +157,7 @@ EOS
       # XXX for now this is all going into memory before we can iterate it.
       # It would be nice to switch this to streaming REST call. 
 
-      start_date = 
-        if input_start_time.is_a?(String)
-          Time.parse(input_start_time)
-        else
-          input_start_time
-        end
+      start_date = input_start_time
 
       query_sql = ETL::Query::Sequel.new(@select, @series, @where, @group_by, limit)
 
