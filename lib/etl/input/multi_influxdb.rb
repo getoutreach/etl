@@ -57,9 +57,7 @@ module ETL::Input
     end
 
     def slack_tags
-      [:input_start_time, :input_end_time].each_with_object({}) do |atr, slack_hash|
-        slack_hash[atr] = send(atr)
-      end
+      [:input_start_time, :input_end_time].each_with_object({}) { |atr, slack_hash| slack_hash[atr] = send(atr) }
     end
 
     def input_start_time
@@ -84,9 +82,7 @@ module ETL::Input
 
     def get_schema_map
       schema = field_keys
-      tag_keys.each do |tag|
-        schema[tag.to_sym] = :string if !schema.keys.include?(tag.to_sym)
-      end
+      tag_keys.each { |tag| schema[tag.to_sym] = :string if !schema.keys.include?(tag.to_sym) }
       {:time => :date}.merge(schema)
     end
 
@@ -97,9 +93,7 @@ EOS
       log.debug("Executing InfluxDB query to get field keys: #{query}")
       row = with_retry { conn.query(query, denormalize: false) } || []
       h = Hash.new
-      if !row.nil? && row[0]["values"]
-        row[0]["values"].each{ |k,v| h[k.to_sym] = v.to_sym }
-      end
+      row[0]["values"].each{ |k,v| h[k.to_sym] = v.to_sym } if !row.nil? && row[0]["values"]
       h
     end
 
@@ -109,9 +103,7 @@ EOS
 EOS
       log.debug("Executing InfluxDB query to get tag keys: #{query}")
       row = with_retry { conn.query(query, denormalize: false) } || []
-      if !row.nil? && row[0]["values"]
-        return row[0]["values"].flatten(1)
-      end
+      return row[0]["values"].flatten(1) if !row.nil? && row[0]["values"]
       []
     end
 
@@ -129,9 +121,7 @@ EOS
           first_time = h["time"]
           first_time += " UTC" unless first_time.include? "UTC"
           oldest_date = Time.parse(first_time)
-          if ( @input_end_time - oldest_date ) <= 60*60*24*@backfill_days
-            return oldest_date
-          end
+          return oldest_date if ( @input_end_time - oldest_date ) <= 60*60*24*@backfill_days
         end
       end
       @input_end_time - 60*60*24*@backfill_days
@@ -181,9 +171,7 @@ EOS
               if !va.include?(nil)
                 # each value set should zip up to same number of items as the 
                 # column labels we got back
-                if va.count != row_in["columns"].count
-                  raise "# of columns (#{row_in["columns"]}) does not match values (#{row_in["values"]})" 
-                end
+                raise "# of columns (#{row_in["columns"]}) does not match values (#{row_in["values"]})" if va.count != row_in["columns"].count
                 
                 # build our row by combining tags and value columns. note that if
                 # they are named the same then tags will get overwritten
