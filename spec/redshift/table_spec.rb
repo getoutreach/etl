@@ -4,7 +4,7 @@ RSpec.describe "Redshift Table" do
   describe "Use Redshift altered Postgres sql lib" do
     context "Can generate sql for schema operations for a table." do
       let (:test_table) { "test_table" }
-      
+
       it "Create a table sql with DIST_STYLE ALL" do
         t = ETL::Redshift::Table.new(:test_table, { dist_style:"ALL" })
         t.int(:id)
@@ -42,14 +42,14 @@ RSpec.describe "Redshift Table" do
         t = ETL::Redshift::Table.new(:test_table)
         t.int(:id)
         t.set_identity(:id)
-        expect(t.create_table_sql).to eq("CREATE TABLE IF NOT EXISTS test_table ( \"id\" int IDENTITY(1, 1) NOT NULL)")
+        expect(t.create_table_sql).to eq("CREATE TABLE IF NOT EXISTS test_table( \"id\" int IDENTITY(1, 1) NOT NULL )")
       end
 
       it "Create a table with identity and custom parameters" do
         t = ETL::Redshift::Table.new(:test_table)
         t.int(:id)
         t.set_identity(:id, 0, 2)
-        expect(t.create_table_sql).to eq("CREATE TABLE IF NOT EXISTS test_table ( \"id\" int IDENTITY(0, 2) NOT NULL)")
+        expect(t.create_table_sql).to eq("CREATE TABLE IF NOT EXISTS test_table( \"id\" int IDENTITY(0, 2) NOT NULL )")
       end
     end
   end
