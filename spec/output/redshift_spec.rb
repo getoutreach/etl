@@ -120,9 +120,7 @@ end
 RSpec.describe "redshift output", skip: true do
 
   def get_conn
-    client = ::ETL::Redshift::Client.new(rspec_redshift_params)
-    client.connect
-    return client
+    ::ETL::Redshift::Client.new(rspec_redshift_params)
   end
 
   # helper function for comparing expected and actual results from Redshift
