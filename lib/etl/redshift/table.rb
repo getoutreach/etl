@@ -45,8 +45,8 @@ module ETL
         columns.each do |name, column|
           column_type = col_type_str(column)
           column_statement = "\"#{name}\" #{column_type}"
-          column_statement += " IDENTITY(#{@identity_key[:seed]}, #{@identity_key[:step]}) NOT NULL" unless @identity_key.empty?
-          column_statement += " NOT NULL" if @primary_key.include?(name.to_sym) && !column_statement.end_with?("NOT NULL")
+          column_statement += " IDENTITY(#{@identity_key[:seed]}, #{@identity_key[:step]})" unless @identity_key.empty?
+          column_statement += " NOT NULL" if @primary_key.include?(name.to_sym) || ( !@identity_key.empty? && @identity_key[:column] == name.to_sym )
 
           type_ary << column_statement
         end
