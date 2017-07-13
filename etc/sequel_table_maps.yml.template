@@ -12,8 +12,6 @@ table_name:
     user: 'masteruser'
     password: ''
     dbname: 'dev'
-  target_db: ""
-  target_table: ""
   columns:
     day: day
     attribute: attr

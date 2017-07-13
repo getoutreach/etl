@@ -4,7 +4,7 @@ require 'etl/migration/sequel'
 
 RSpec.describe "sequel migration from mysql" do
   let(:table_name) { "test_table" }
-  let(:migration) { ETL::Migration::Sequel.new(table_name)}
+  let(:migration) { ETL::Migration::Sequel.new(table_name, 0)}
   let(:dbconfig) { { host: "localhost", database: "mysql", username: "root", password: "mysql" } }
   let(:mysql_client) { Mysql2::Client.new(
       :host => dbconfig[:host],
