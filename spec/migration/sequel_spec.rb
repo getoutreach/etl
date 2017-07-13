@@ -33,6 +33,6 @@ SQL
 
     mysql_client.query(insert_sql)
     mysql_client.store_result while mysql_client.next_result
-    expect(migration.schema_map).to eq( {"day"=>"timestamp", "attr"=>"varchar(100)"} )
+    expect(migration.schema_map).to eq( {"day"=>"timestamp", "attribute"=>"varchar(100)"} )
   end
 end
