@@ -2,7 +2,7 @@ require 'migration/sequel'
 
 module ETL::Job
 
-  # Base class for all jobs that are run
+  # Base class for all migratable jobs that are run
   class MigratableBase < Base
 
     def migration
