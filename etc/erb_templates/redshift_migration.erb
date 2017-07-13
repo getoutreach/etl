@@ -1,0 +1,10 @@
+require 'sequel'
+
+module Migration
+  class Redshift
+    Sequel.migration do
+      up { <%= @up %> }
+      down { <%= @down %> }
+    end
+  end
+end

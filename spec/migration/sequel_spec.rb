@@ -4,7 +4,7 @@ require 'etl/migration/sequel'
 
 RSpec.describe "sequel migration from mysql" do
   let(:table_name) { "test_table" }
-  let(:migration) { ETL::Migration::Sequel.new(table_name, 0)}
+  let(:migration) { ETL::Migration::Sequel.new(table_name)}
   let(:dbconfig) { { host: "localhost", database: "mysql", username: "root", password: "mysql" } }
   let(:mysql_client) { Mysql2::Client.new(
       :host => dbconfig[:host],
@@ -12,7 +12,7 @@ RSpec.describe "sequel migration from mysql" do
       :username => dbconfig[:username],
       :password => dbconfig[:password]) }
 
-  it "fetch mysql schemas" do
+  before do
     # add data to the test db
     sql = <<SQL
 drop table if exists #{table_name};
@@ -30,9 +30,19 @@ insert into #{table_name} (day, attribute) values
   ('2015-04-02', 'snow'),
   ('2015-04-03', 'sun');
 SQL
-
     mysql_client.query(insert_sql)
     mysql_client.store_result while mysql_client.next_result
-    expect(migration.schema_map).to eq( {"day"=>"timestamp", "attribute"=>"varchar(100)"} )
+  end
+
+  it "#schema_map" do
+    expect(migration.schema_map).to eq( {:day=>[:timestamp, nil], :attribute=>[:varchar, 100]} )
+  end
+
+  it "#get_up" do
+    expect(migration.get_up.lstrip.rstrip).to eq( "create table #{table_name} ( day timestamp, attribute varchar(100) )" )
+  end
+
+  it "#get_down" do
+    expect(migration.get_down.lstrip.rstrip).to eq( "drop_table(#{table_name})" )
   end
 end

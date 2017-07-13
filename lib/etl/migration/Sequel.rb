@@ -13,8 +13,8 @@ module ETL::Migration
       raise "Could not find config file under #{config_dir}" unless File.file?(@table_map_config_file)
       @config_values = ETL::HashUtil.symbolize_keys(Psych.load_file(@table_map_config_file)) 
 
-      raise "#{@table} is not defined in config file" unless config_values.include? @table
-      table_map = config_values[@table]
+      raise "#{@table} is not defined in config file" unless @config_values.include? @table
+      table_map = @config_values[@table]
 
       @source_db_params = table_map[:source_db_params] || { host: "localhost", adapter: "mysql2", database: "mysql", user: "root", password: "" }
       # Use if we want to change column names in the destination table 
@@ -61,27 +61,22 @@ SQL
 
     # create a migration with a given migration_version
     def generate_migration
-      if @migration_version > 0
-        sql =<<SQL
-      	  alter table #{@table} rename to #{table}_#{current_version}
-SQL
-        @redshiftclient.execute(sql)
-        up = get_up
-        down = get_down
-      else
-        up = get_up
-        down = "" 
-      end
+      down = ""
+      rename = ""
+      rename = "rename_table(#{@table}, #{table}_#{current_version}" if @migration_version > 0
+      up = get_up
 
 s =<<END
 Sequel.migration do
+  up do
+  	#{rename}
+  end
+
   down do
   	#{down}
   end
 
-  up do
-  	#{up}
-  end
+  up {run '#{up}'} 
 end
 END
       File.open("#{@migration_dir}/#{four_digit_str(@current_version+1)}_#{@table}.rb", "w") do |f|
@@ -96,7 +91,7 @@ END
     # create table for migration
     def get_up
       column_array = schema_map.map do |column, types|
-        type = types[0]
+        type = "#{types[0]}"
         type += "(#{types[1]})" if types[1]
         "#{column} #{type}" 
       end
