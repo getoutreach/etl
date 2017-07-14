@@ -7,17 +7,17 @@ module ETL::Cli::Cmd
   class Migration < ETL::Cli::Command
 
     class Create < ETL::Cli::Command
-      parameter "table_name", "Table name we create migration against", required: true
 
+      option "--table", "TABLE", "table name", :required => true
       option ['-p', '--provider'], "Provider", attribute_name: :provider
       option ['-h', '--host'], "Host", attribute_name: :host
       option ['-u', '--user'], "User", attribute_name: :user
       option ['-pw', '--password'], "Password", attribute_name: :password
       option ['-db', '--database'], "Database", attribute_name: :database
-      option ['--inputdir'], "Input directory that contains a configuration file", attribute_name: :input_dir, default: "../../etc"
-      option ['--outputdir'], "Output directory where migration is created at", attribute_name: :output_dir, default: "db/migrations"
+      option "--inputdir", "Input directory that contains a configuration file", :attribute_name => :inputdir, :required => true
+      option "--outputdir", "Output directory where migration is created at", :attribute_name => :outputdir, :required => true 
 
-      Adopter = { mysql: mysql2 }
+      Adopter = { mysql: "mysql2" }
 
       class Generator
         attr_accessor :up, :down
@@ -26,21 +26,21 @@ module ETL::Cli::Cmd
         end
       end
 
-      def config_value
+      def config_values
         @config_values ||= begin
-          config_file = input_dir + "/migration_config.yml"
-          raise "Could not find migration_config.yml file under #{input_dir}" unless File.file?(config_file)
+          config_file = @inputdir + "/migration_config.yml"
+          raise "Could not find migration_config.yml file under #{@inputdir}" unless File.file?(config_file)
           ETL::HashUtil.symbolize_keys(Psych.load_file(config_file))
-          raise "#{table_name} is not defined in the config file" unless config_values.include? table_name
-          config_values[table_name]
+          raise "#{table} is not defined in the config file" unless config_values.include? table
+          config_values[table]
         end
       end
 
       def provider_params
         @provider_params ||= begin
-          if provider && host && user && password && database
-            adapter = provider
-            adapter = Adopter[provider] if Adopter.include? provider
+          if @provider && @host && @user && @password && @database
+            adapter = @provider
+            adapter = Adopter[@provider] if Adopter.include? @provider
             return { host: host, adapter: adapter, database: database, user: user, password: password } 
           else
             raise "source_db_params is not defined in the config file" unless config_values.include? :source_db_params
@@ -63,7 +63,7 @@ module ETL::Cli::Cmd
 
       def schema_map
         @schema_map ||= begin
-          all_schema = source_db_connect.fetch("SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = '#{@table}' ").all
+          all_schema = provider_connect.fetch("SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = '#{@table}' ").all
           all_schema.each_with_object({}) do |column, h|
             column_name = columns[column[:COLUMN_NAME].to_sym]
             h[column_name] = [ column[:DATA_TYPE].to_sym, column[:CHARACTER_MAXIMUM_LENGTH] ]
@@ -76,27 +76,31 @@ module ETL::Cli::Cmd
       end
 
       def migration_version
-        @migration_version ||= Dir["#{output_dir}/*#{table_name}.rb"].length
+        @migration_version ||= Dir["#{@outputdir}/*_#{table}.rb"].length
       end
 
       def create_migration(up, down="")
         generator = Generator.new
-        migration_file = File.open("#{output_dir}/#{four_digit_str(migration_version+1)}_#{table_name}.rb")
-        template = File.read("../../../../etc/erb_templates/redshift_migration.erb")
+        migration_file = File.open("#{@outputdir}/#{four_digit_str(migration_version+1)}_#{table}.rb", "w")
+        template = File.read("#{@inputdir}/redshift_migration.erb")
         generator.up = up
         generator.down = down 
         migration_file << ERB.new(template).result(generator.template_binding)
         migration_file.close
       end
 
-      def execute
+      def up_sql
         column_array = schema_map.map do |column, types|
           type = "#{types[0]}"
           type += "(#{types[1]})" if types[1]
           "#{column} #{type}" 
         end
 
-        up = " run 'create table #{@table} ( #{column_array.join(", ")} )' "
+        "create table #{@table} ( #{column_array.join(", ")} )"
+      end
+
+      def execute
+        up = " run '#{up_sql}' "
         create_migration(up)
       end
     end
