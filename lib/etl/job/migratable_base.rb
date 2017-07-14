@@ -12,18 +12,23 @@ module ETL::Job
       end
     end
 
+    def migration_files
+      migration_dir = migration_config.fetch(:migration_dir, "db/migrations")
+      Dir["#{migration_dir}/*_#{id}.rb"]
+    end
+
     def migrate
-      migration_dir = migration_config.fetch(id, "db/migrations")
-      # execute migration
       migration_version = migration_config.fetch(:migration_version, 0)
-      migration_files = Dir["#{migration_dir}/*_#{id}.rb"]
+      # executt migration
       migration_files.each do |file|
         next unless file.split('/').last[0..3].to_i > migration_version
-        require file
-        m = Migration::Redshift.new
-        m.up
-        m.down
+        load file
       end
+    end
+
+    def run
+      migrate
+      super
     end
   end
 end

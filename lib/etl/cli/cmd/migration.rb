@@ -100,8 +100,7 @@ module ETL::Cli::Cmd
       end
 
       def execute
-        up = " run '#{up_sql}' "
-        create_migration(up)
+        create_migration(up_sql)
       end
     end
 

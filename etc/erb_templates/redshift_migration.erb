@@ -1,10 +1,14 @@
-require 'sequel'
+require 'etl/migration/redshift'
 
-module Migration
-  class Redshift
-    Sequel.migration do
-      up { <%= @up %> }
-      down { <%= @down %> }
-    end
+class RedshiftMigration < ETL::Migration::Redshift
+  def up
+    <%= @up %>
+  end
+
+  def down
+    <%= @down %>
   end
 end
+
+rm = RedshiftMigration.new
+rm.execute
