@@ -1,14 +1,22 @@
 require 'etl/migration/redshift'
+require 'singleton'
 
-class RedshiftMigration < ETL::Migration::Redshift
-  def up
-    <%= @up %>
+module Migration
+  class <%= @table %><%= @version %> < ETL::Migration::Redshift
+    include Singleton
+
+    def up
+      <%= @up %>
+    end
+
+    def down
+      <%= @down %>
+    end
   end
 
-  def down
-    <%= @down %>
+  def self.execute
+    <%= @table %><%= @version %>.instance.execute
   end
 end
 
-rm = RedshiftMigration.new
-rm.execute
+Migration.execute

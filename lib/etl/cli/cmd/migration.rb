@@ -20,7 +20,7 @@ module ETL::Cli::Cmd
       Adopter = { mysql: "mysql2" }
 
       class Generator
-        attr_accessor :up, :down
+        attr_accessor :table, :version, :up, :down
         def template_binding
           binding
         end
@@ -85,10 +85,13 @@ module ETL::Cli::Cmd
 
       def create_migration(up, down="")
         generator = Generator.new
-        migration_file = File.open("#{@outputdir}/#{four_digit_str(migration_version+1)}_#{table}.rb", "w")
+        version = four_digit_str(migration_version+1)
+        migration_file = File.open("#{@outputdir}/#{version}_#{table}.rb", "w")
         template = File.read("#{@inputdir}/redshift_migration.erb")
         generator.up = up
         generator.down = down 
+        generator.table = table.capitalize 
+        generator.version = version 
         migration_file << ERB.new(template).result(generator.template_binding)
         migration_file.close
       end
@@ -101,6 +104,10 @@ module ETL::Cli::Cmd
         end
 
         "create table #{@table} ( #{column_array.join(", ")} )"
+      end
+
+      def down_sql
+        "drop table #{@table}"
       end
 
       def execute

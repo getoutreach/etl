@@ -41,8 +41,11 @@ END
     before { allow(described_instance).to receive(:source_schema).and_return([ { COLUMN_NAME: "day", DATA_TYPE: "timestamp", CHARACTER_MAXIMUM_LENGTH: nil },
                                                                                { COLUMN_NAME: "attribute", DATA_TYPE: "varchar", CHARACTER_MAXIMUM_LENGTH: "100" }]) }
 
-    it '#up_sql' do
+    it '#schema_map' do
       expect( described_instance.schema_map ).to eq({ "day"=>[:timestamp, nil], "attr"=>[:varchar, "100"] })
+    end
+
+    it '#up_sql' do
       expect( described_instance.up_sql ).to eq( "create table #{table} ( day timestamp, attr varchar(100) )" )
     end
 
