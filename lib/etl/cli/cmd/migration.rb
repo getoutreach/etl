@@ -26,13 +26,14 @@ module ETL::Cli::Cmd
         end
       end
 
-      def config_values
-        @config_values ||= begin
+      def table_config
+        @table_config ||= begin
           config_file = @inputdir + "/migration_config.yml"
           raise "Could not find migration_config.yml file under #{@inputdir}" unless File.file?(config_file)
-          ETL::HashUtil.symbolize_keys(Psych.load_file(config_file))
-          raise "#{table} is not defined in the config file" unless config_values.include? table
-          config_values[table]
+          config_values = ETL::HashUtil.symbolize_keys(Psych.load_file(config_file))
+          puts "config_values #{config_values}"
+          raise "#{table} is not defined in the config file" unless config_values.include? table.to_sym
+          config_values[table.to_sym]
         end
       end
 
@@ -43,8 +44,8 @@ module ETL::Cli::Cmd
             adapter = Adopter[@provider] if Adopter.include? @provider
             return { host: host, adapter: adapter, database: database, user: user, password: password } 
           else
-            raise "source_db_params is not defined in the config file" unless config_values.include? :source_db_params
-            return config_values[:source_db_params]
+            raise "source_db_params is not defined in the config file" unless table_config.include? :source_db_params
+            return table_config[:source_db_params]
           end  
           raise "Parameters to connect to the data source are required"
         end
@@ -52,8 +53,8 @@ module ETL::Cli::Cmd
 
       def columns
         @columns ||= begin
-          raise "columns is not defined in the config file" unless config_values.include? :columns 
-          config_values[:columns]
+          raise "columns is not defined in the config file" unless table_config.include? :columns 
+          table_config[:columns]
         end
       end
 
@@ -61,10 +62,13 @@ module ETL::Cli::Cmd
         @provider_connect ||= ::Sequel.connect(provider_params)
       end
 
+      def source_schema
+        @source_schema ||= provider_connect.fetch("SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = '#{@table}' ").all
+      end
+
       def schema_map
         @schema_map ||= begin
-          all_schema = provider_connect.fetch("SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = '#{@table}' ").all
-          all_schema.each_with_object({}) do |column, h|
+          source_schema.each_with_object({}) do |column, h|
             column_name = columns[column[:COLUMN_NAME].to_sym]
             h[column_name] = [ column[:DATA_TYPE].to_sym, column[:CHARACTER_MAXIMUM_LENGTH] ]
           end
