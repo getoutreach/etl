@@ -16,10 +16,5 @@ module ETL::Migration
     def down
       ""
     end
-
-    def execute
-      @client.execute(up) unless up.empty?
-      @client.execute(down) unless down.empty?
-    end
   end
 end

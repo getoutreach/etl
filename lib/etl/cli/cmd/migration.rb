@@ -10,10 +10,10 @@ module ETL::Cli::Cmd
 
       option "--table", "TABLE", "table name", :required => true
       option ['-p', '--provider'], "Provider", attribute_name: :provider
-      option ['-h', '--host'], "Host", attribute_name: :host
-      option ['-u', '--user'], "User", attribute_name: :user
-      option ['-pw', '--password'], "Password", attribute_name: :password
-      option ['-db', '--database'], "Database", attribute_name: :database
+      option "--host", "Host", attribute_name: :host
+      option "--user", "User", attribute_name: :user
+      option "--password", "Password", attribute_name: :password
+      option "--database", "Database", attribute_name: :database
       option "--inputdir", "Input directory that contains a configuration file", :attribute_name => :inputdir
       option "--outputdir", "Output directory where migration is created at", :attribute_name => :outputdir, :required => true 
 
@@ -62,7 +62,6 @@ module ETL::Cli::Cmd
       end
 
       def source_schema
-        #@source_schema ||= provider_connect.fetch("SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = '#{@table}' ").all
         @source_schema ||= provider_connect.schema(@table)
       end
 
@@ -100,15 +99,19 @@ module ETL::Cli::Cmd
       def up_sql
         column_array = schema_map.map { |column, type| "#{column} #{type}" }
 
-        "create table #{@table} ( #{column_array.join(", ")} )"
+        "@client.execute(\"create table #{@table} ( #{column_array.join(', ')} )\")"
       end
 
       def down_sql
-        "drop table #{@table}"
+        # Dont produce down function in first migration
+        return "" if migration_version == 0
+        down = <<END
+        @client.execute("drop table #{@table}")
+END
       end
 
       def execute
-        create_migration(up_sql)
+        create_migration(up_sql, down_sql)
       end
     end
 

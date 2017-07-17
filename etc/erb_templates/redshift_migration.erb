@@ -14,7 +14,11 @@ module Migration
     end
   end
 
-  def self.execute
-    <%= @table %><%= @version %>.instance.execute
+  def self.up
+    <%= @table %><%= @version %>.instance.up
+  end
+
+  def self.down
+    <%= @table %><%= @version %>.instance.down
   end
 end

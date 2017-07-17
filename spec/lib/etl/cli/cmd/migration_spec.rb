@@ -23,7 +23,6 @@ test_table:
     day: day
     attribute: attr
 END
-    #source_db_params:
 
     f << s
     f.close()
