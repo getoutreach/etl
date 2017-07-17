@@ -19,11 +19,11 @@ RSpec.describe ETL::Cli::Cmd::Migration::Create do
     f = File.open("#{Dir.pwd}/db/migration_config.yml", "w")
     s = <<-END
 test_table:
-  source_db_params:
   columns:
     day: day
     attribute: attr
 END
+    #source_db_params:
 
     f << s
     f.close()
@@ -133,6 +133,17 @@ END
     let(:database) { 'database' }
     it '#provider_params' do
       expect( described_instance.provider_params ).to eq( { host: host, adapter: provider, database: database, user: user, password: password } )
+    end
+  end
+
+  context 'with missing custom connection setting' do
+    let(:args) { ['--host', host, '--user', user, '--password', password, '--database', database].concat(super()) }
+    let(:host) { 'localhost' }
+    let(:user) { 'user' }
+    let(:password) { 'password1234' }
+    let(:database) { 'database' }
+    it '#provider_params' do
+      expect{ described_instance.provider_params }.to raise_error("source_db_params is not defined in the config file")
     end
   end
 end
