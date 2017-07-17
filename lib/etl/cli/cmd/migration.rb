@@ -14,7 +14,7 @@ module ETL::Cli::Cmd
       option ['-u', '--user'], "User", attribute_name: :user
       option ['-pw', '--password'], "Password", attribute_name: :password
       option ['-db', '--database'], "Database", attribute_name: :database
-      option "--inputdir", "Input directory that contains a configuration file", :attribute_name => :inputdir, :required => true
+      option "--inputdir", "Input directory that contains a configuration file", :attribute_name => :inputdir
       option "--outputdir", "Output directory where migration is created at", :attribute_name => :outputdir, :required => true 
 
       Adopter = { mysql: "mysql2" }

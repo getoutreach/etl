@@ -123,4 +123,16 @@ END
       expect( described_instance.up_sql ).to eq( "create table #{table} ( day datetime, attr varchar(100) )" )
     end
   end
+
+  context 'with custom connection setting' do
+    let(:args) { ['--provider', provider, '--host', host, '--user', user, '--password', password, '--database', database].concat(super()) }
+    let(:provider) { 'provider' }
+    let(:host) { 'localhost' }
+    let(:user) { 'user' }
+    let(:password) { 'password1234' }
+    let(:database) { 'database' }
+    it '#provider_params' do
+      expect( described_instance.provider_params ).to eq( { host: host, adapter: provider, database: database, user: user, password: password } )
+    end
+  end
 end
