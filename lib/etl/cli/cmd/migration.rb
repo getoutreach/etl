@@ -31,7 +31,6 @@ module ETL::Cli::Cmd
           config_file = @inputdir + "/migration_config.yml"
           raise "Could not find migration_config.yml file under #{@inputdir}" unless File.file?(config_file)
           config_values = ETL::HashUtil.symbolize_keys(Psych.load_file(config_file))
-          puts "config_values #{config_values}"
           raise "#{table} is not defined in the config file" unless config_values.include? table.to_sym
           config_values[table.to_sym]
         end

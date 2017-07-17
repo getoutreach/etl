@@ -23,6 +23,7 @@ module ETL::Job
       migration_files.each do |file|
         next unless file.split('/').last[0..3].to_i > migration_version
         load file
+        Migration.execute
       end
     end
 

@@ -21,14 +21,19 @@ RSpec.describe "migratablejob" do
     Dir.mkdir 'db'
     f = File.open("#{Dir.pwd}/db/0001_job.rb", "w")
     s = <<-END
-  class Put
-    def p
-      puts "test output"
+  require 'singleton'
+  module Migration
+    class Put
+      include Singleton
+      def p
+        puts "test output"
+      end
+    end
+
+    def self.execute
+      Put.instance.p
     end
   end
-
-  put = Put.new
-  put.p
 END
     f << s
     f.close()
