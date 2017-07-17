@@ -12,6 +12,7 @@ RSpec.describe ETL::Cli::Cmd::Migration::Create do
   let(:table) { "test_table" }
   let(:dir) { "#{Dir.pwd}/db" }
   let(:args) { ["--table", table, "--outputdir", dir, "--inputdir", dir] }
+  let(:passwd) { "mysecretpassword" }
 
   before(:all) do
     Dir.mkdir 'db'
@@ -37,16 +38,67 @@ END
     system( "rm -rf #{Dir.pwd}/db")
   end
 
-  context 'with table_name' do
-    before { allow(described_instance).to receive(:source_schema).and_return([ { COLUMN_NAME: "day", DATA_TYPE: "timestamp", CHARACTER_MAXIMUM_LENGTH: nil },
-                                                                               { COLUMN_NAME: "attribute", DATA_TYPE: "varchar", CHARACTER_MAXIMUM_LENGTH: "100" }]) }
+  context 'schema_map to mysql' do
+    before do
+      # Run docker mysql
+      system("docker run --name test-mysql -e MYSQL_ROOT_PASSWORD=#{passwd} -d mysql")
+      sleep(0.5)
+      allow(described_instance).to receive(:provider_params).and_return({ host: "localhost", adapter: "mysql2", database: "mysql", user: "root", password: passwd } )
+    end
+
+    after do
+      system("docker stop test-mysql")
+      system("docker rm test-mysql")
+    end
+
+    it "schema from mysql" do
+      # Create test table
+      described_instance.provider_connect.create_table! table do
+        String :attribute, :size=>100 
+        DateTime :day
+      end
+
+      expect( described_instance.source_schema ).to eq( [[:attribute, {:primary_key=>false, :allow_null=>true, :default=>nil, :db_type=>"varchar(100)", :type=>:string, :ruby_default=>nil, :max_length=>100}],
+                                                         [:day, {:primary_key=>false, :allow_null=>true, :default=>nil, :db_type=>"datetime", :type=>:datetime, :ruby_default=>nil}]] )
+    end
+  end
+
+  context 'schema_map to postgres' do
+    before do
+      # Run postgres docker
+      system("docker run --name test-postgres -e POSTGRES_PASSWORD=#{passwd} -d postgres")
+      sleep(0.5)
+      allow(described_instance).to receive(:provider_params).and_return({ host: "localhost", adapter: "postgres", database: "postgres", user: "postgres", password: passwd } )
+    end
+
+    after do
+      system("docker stop test-postgres")
+      system("docker rm test-postgres")
+    end
+
+    it "schema from postgres" do
+      # Create test table
+      described_instance.provider_connect.create_table! table do
+        String :attribute, :size=>100 
+        DateTime :day
+      end
+
+      expect( described_instance.source_schema ).to eq( [[:attribute, {:oid=>1043, :db_type=>"character varying(100)", :default=>nil, :allow_null=>true, :primary_key=>false, :type=>:string, :ruby_default=>nil, :max_length=>100}],
+                                                         [:day, {:oid=>1114, :db_type=>"timestamp without time zone", :default=>nil, :allow_null=>true, :primary_key=>false, :type=>:datetime, :ruby_default=>nil}]] )
+    end
+  end
+
+  # Test with mysql format schema
+  context 'with mysql' do
+    before { allow(described_instance).to receive(:source_schema).and_return([[:attribute, {:primary_key=>false, :allow_null=>true, :default=>nil, :db_type=>"varchar(100)", :type=>:string, :ruby_default=>nil, :max_length=>100}],
+                                                                              [:day, {:primary_key=>false, :allow_null=>true, :default=>nil, :db_type=>"datetime", :type=>:datetime, :ruby_default=>nil}]] ) }
 
     it '#schema_map' do
-      expect( described_instance.schema_map ).to eq({ "day"=>[:timestamp, nil], "attr"=>[:varchar, "100"] })
+      expect( described_instance.schema_map ).to eq({ "day" => "datetime", "attr" => "varchar(100)" })
     end
 
     it '#up_sql' do
-      expect( described_instance.up_sql ).to eq( "create table #{table} ( day timestamp, attr varchar(100) )" )
+      expect( described_instance.up_sql ).to eq( "create table #{table} ( day datetime, attr varchar(100) )" )
     end
 
     it '#execute' do
@@ -60,6 +112,19 @@ END
       described_instance.execute
       expect(File).to exist("#{dir}/0001_#{table}.rb") 
       expect(File).to exist("#{dir}/0002_#{table}.rb") 
+    end
+  end
+
+  # Test with postgres format schema
+  context 'with postgres' do
+    before { allow(described_instance).to receive(:source_schema).and_return([[:attribute, {:primary_key=>false, :allow_null=>true, :default=>nil, :db_type=>"varchar(100)", :type=>:string, :ruby_default=>nil, :max_length=>100}],
+                                                                              [:day, {:primary_key=>false, :allow_null=>true, :default=>nil, :db_type=>"datetime", :type=>:datetime, :ruby_default=>nil}]] ) }
+    it '#schema_map' do
+      expect( described_instance.schema_map ).to eq({ "day" => "datetime", "attr" => "varchar(100)" })
+    end
+
+    it '#up_sql' do
+      expect( described_instance.up_sql ).to eq( "create table #{table} ( day datetime, attr varchar(100) )" )
     end
   end
 end

@@ -63,15 +63,17 @@ module ETL::Cli::Cmd
       end
 
       def source_schema
-        @source_schema ||= provider_connect.fetch("SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = '#{@table}' ").all
+        #@source_schema ||= provider_connect.fetch("SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = '#{@table}' ").all
+        @source_schema ||= provider_connect.schema(@table)
       end
 
       def schema_map
         @schema_map ||= begin
-          source_schema.each_with_object({}) do |column, h|
-            column_name = columns[column[:COLUMN_NAME].to_sym]
-            h[column_name] = [ column[:DATA_TYPE].to_sym, column[:CHARACTER_MAXIMUM_LENGTH] ]
+          schema_hash = source_schema.each_with_object({}) do |schema, h|
+            column_name = columns[schema[0].to_sym]
+            h[column_name] = schema[1][:db_type] 
           end
+          schema_hash.sort_by { |k, _| columns.values.index(k) }.to_h
         end
       end
 
@@ -97,11 +99,7 @@ module ETL::Cli::Cmd
       end
 
       def up_sql
-        column_array = schema_map.map do |column, types|
-          type = "#{types[0]}"
-          type += "(#{types[1]})" if types[1]
-          "#{column} #{type}" 
-        end
+        column_array = schema_map.map { |column, type| "#{column} #{type}" }
 
         "create table #{@table} ( #{column_array.join(", ")} )"
       end
