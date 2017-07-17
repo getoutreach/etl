@@ -20,15 +20,11 @@ RSpec.describe ETL::Cli::Cmd::Migration::Create do
     s = <<-END
 test_table:
   source_db_params:
-    host: "localhost"
-    adapter: "mysql2"
-    database: "mysql"
-    user: "root"
-    password: ""
   columns:
     day: day
     attribute: attr
 END
+
     f << s
     f.close()
     system( "cp #{Dir.pwd}/etc/erb_templates/redshift_migration.erb #{Dir.pwd}/db/")
