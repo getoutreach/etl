@@ -1,22 +1,6 @@
 require 'etl/job/exec'
 require 'etl/job/migratable_base'
 
-=begin
-class AbstractJob < ETL::Job::MigratableBase
-  def initialize
-    @migration_dir = Dir.pwd
-  end
-  def output
-    o = super
-    o.success = 34
-    o.message = 'congrats!'
-    o.sleep_time = nil
-    o.exception = nil
-    o
-  end
-end
-=end
-
 class Job < ETL::Job::MigratableBase 
   register_job
 
@@ -83,9 +67,6 @@ END
   let(:payload) { ETL::Queue::Payload.new(job_id, batch) }
   let(:job) { Job.new(ETL::Batch.new(payload.batch_hash)) }
   let(:job_exec) { ETL::Job::Exec.new(payload) }
-  let(:migration_dir) { "#{Dir.pwd}/db" }
-  let(:migration_version) { 0 }
-
   
   context "migration" do
     it { expect(job.id).to eq("job") }

@@ -6,7 +6,7 @@ module ETL::Job
 
     # return an array of files sorted by version
     def migration_files
-      Dir["#{migration_dir}/*_#{id}.rb"]
+      Dir["#{@migration_dir}/*_#{id}.rb"]
     end
 
     def deploy_version
@@ -21,7 +21,7 @@ module ETL::Job
     def migrate
       # execute migration
       # To-do: raise error message if the target version migration doesnt exist
-      raise "Migration for version #{target_version} does not exist in #{migration_dir}" unless migration_files.include? "#{migration_dir}/#{target_version.to_s.rjust(4, "0")}_#{id}.rb"
+      raise "Migration for version #{@target_version} does not exist in #{@migration_dir}" unless migration_files.include? "#{@migration_dir}/#{@target_version.to_s.rjust(4, "0")}_#{id}.rb"
 
       return if deploy_version == @target_version
       # To-do: execute 'down' when the target version is smaller than deploy version 
