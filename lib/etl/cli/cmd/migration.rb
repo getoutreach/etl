@@ -75,18 +75,14 @@ module ETL::Cli::Cmd
         end
       end
 
-      def four_digit_str(i)
-        i.to_s.rjust(4, "0")
-      end
-
       def migration_version
-        @migration_version ||= Dir["#{@outputdir}/*_#{table}.rb"].length
+        @migration_version ||= Dir["#{@outputdir}/#{table}_*.rb"].length
       end
 
       def create_migration(up, down="")
         generator = Generator.new
-        version = four_digit_str(migration_version+1)
-        migration_file = File.open("#{@outputdir}/#{version}_#{table}.rb", "w")
+        version = ETL::StringUtil.digit_str(migration_version+1)
+        migration_file = File.open("#{@outputdir}/#{table}_#{version}.rb", "w")
         template = File.read("#{@inputdir}/redshift_migration.erb")
         generator.up = up
         generator.down = down 

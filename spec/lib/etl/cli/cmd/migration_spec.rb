@@ -98,15 +98,15 @@ END
 
     it '#execute' do
       described_instance.execute
-      expect(File).to exist("#{dir}/0001_#{table}.rb") 
+      expect(File).to exist("#{dir}/#{table}_0001.rb") 
     end
 
     it '#execute' do
       system( "rm #{dir}/db/*")
       described_instance.execute
       described_instance.execute
-      expect(File).to exist("#{dir}/0001_#{table}.rb") 
-      expect(File).to exist("#{dir}/0002_#{table}.rb") 
+      expect(File).to exist("#{dir}/#{table}_0001.rb") 
+      expect(File).to exist("#{dir}/#{table}_0002.rb") 
     end
   end
 

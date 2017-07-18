@@ -1,10 +1,7 @@
 require 'etl/migration/redshift'
-require 'singleton'
 
 module Migration
   class <%= @table %><%= @version %> < ETL::Migration::Redshift
-    include Singleton
-
     def up
       <%= @up %>
     end
@@ -12,13 +9,5 @@ module Migration
     def down
       <%= @down %>
     end
-  end
-
-  def self.up
-    <%= @table %><%= @version %>.instance.up
-  end
-
-  def self.down
-    <%= @table %><%= @version %>.instance.down
   end
 end

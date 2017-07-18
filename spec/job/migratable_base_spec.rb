@@ -25,33 +25,39 @@ RSpec.describe "migratablejob" do
   # Make migration_dir and put files to be executed in migrate
   before(:all) do
     Dir.mkdir 'db'
-    f = File.open("#{Dir.pwd}/db/0001_job.rb", "w")
+    f1 = File.open("#{Dir.pwd}/db/job_0001.rb", "w")
     s = <<-END
-  require 'singleton'
   module Migration
-    class Put
-      include Singleton
-
+    class Job0001
       def up
-        puts "test output up"
+        puts "test output up at version 1"
       end
 
       def down 
-        puts "test output down"
+        puts "test output down at version 1"
       end
-    end
-
-    def self.up
-      Put.instance.up
-    end
-
-    def self.down
-      Put.instance.down
     end
   end
 END
-    f << s
-    f.close()
+    f1 << s
+    f1.close()
+
+    f2 = File.open("#{Dir.pwd}/db/job_0002.rb", "w")
+    s = <<-END
+  module Migration
+    class Job0002
+      def up
+        puts "test output up at version 2"
+      end
+
+      def down 
+        puts "test output down at version 2"
+      end
+    end
+  end
+END
+    f2 << s
+    f2.close()
   end
 
   after(:all) do
@@ -70,15 +76,17 @@ END
   
   context "migration" do
     it { expect(job.id).to eq("job") }
-    it { expect( job.migration_files.length ).to eq(1) }
-    it "#migrate up" do
+    it { expect( job.migration_files.length ).to eq(2) }
+    it "#migrate up to 2" do
       allow(job).to receive(:deploy_version).and_return(0)
-      expect { job.migrate }.to output("test output up\n").to_stdout
+      job.target_version = 2
+      expect { job.migrate }.to output("test output up at version 1\ntest output up at version 2\n").to_stdout
     end 
 
-    it "#migrate down" do
+    it "#migrate down to 1" do
       allow(job).to receive(:deploy_version).and_return(2)
-      expect { job.migrate }.to output("test output down\n").to_stdout
+      job.target_version = 0
+      expect { job.migrate }.to output("test output down at version 2\ntest output down at version 1\n").to_stdout
     end 
   
     it "creates run models" do
