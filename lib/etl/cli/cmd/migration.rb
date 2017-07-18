@@ -79,7 +79,7 @@ module ETL::Cli::Cmd
         @migration_version ||= Dir["#{@outputdir}/#{table}_*.rb"].length
       end
 
-      def create_migration(up, down="")
+      def create_migration(up, down)
         generator = Generator.new
         version = ETL::StringUtil.digit_str(migration_version+1)
         migration_file = File.open("#{@outputdir}/#{table}_#{version}.rb", "w")
