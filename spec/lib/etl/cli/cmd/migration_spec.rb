@@ -2,7 +2,7 @@ require 'spec_helper'
 require 'etl/cli/cmd/migration'
 require 'json'
 
-RSpec.describe ETL::Cli::Cmd::Migration::Create do
+RSpec.describe ETL::Cli::Cmd::Migration::Create, skip: true do
   let(:described_instance) do
     instance = described_class.new('etl migration create', {})
     instance.parse(args)
@@ -36,9 +36,9 @@ END
   context 'schema_map to mysql' do
     before do
       # Run docker mysql
-      system("docker run --name test-mysql -e MYSQL_ROOT_PASSWORD=#{passwd} -d mysql")
+      system("docker run --name test-mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=#{passwd} -d mysql:latest")
       sleep(0.5)
-      allow(described_instance).to receive(:provider_params).and_return({ host: "localhost", adapter: "mysql2", database: "mysql", user: "root", password: passwd } )
+      allow(described_instance).to receive(:provider_params).and_return({ host: "172.17.0.1", adapter: "mysql2", database: "mysql", user: "root", password: passwd } )
     end
 
     after do
