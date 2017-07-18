@@ -1,9 +1,31 @@
 require 'etl/job/exec'
 require 'etl/job/migratable_base'
 
-class Job < ETL::Job::MigratableBase
+=begin
+class AbstractJob < ETL::Job::MigratableBase
+  def initialize
+    @migration_dir = Dir.pwd
+  end
+  def output
+    o = super
+    o.success = 34
+    o.message = 'congrats!'
+    o.sleep_time = nil
+    o.exception = nil
+    o
+  end
+end
+=end
+
+class Job < ETL::Job::MigratableBase 
   register_job
-  
+
+  def initialize(b)
+    super(b)
+    @target_version = 1
+    @migration_dir = "#{Dir.pwd}/db" 
+  end
+
   def output
     o = super
     o.success = 34
@@ -25,13 +47,22 @@ RSpec.describe "migratablejob" do
   module Migration
     class Put
       include Singleton
-      def p
-        puts "test output"
+
+      def up
+        puts "test output up"
+      end
+
+      def down 
+        puts "test output down"
       end
     end
 
-    def self.execute
-      Put.instance.p
+    def self.up
+      Put.instance.up
+    end
+
+    def self.down
+      Put.instance.down
     end
   end
 END
@@ -53,18 +84,20 @@ END
   let(:job) { Job.new(ETL::Batch.new(payload.batch_hash)) }
   let(:job_exec) { ETL::Job::Exec.new(payload) }
   let(:migration_dir) { "#{Dir.pwd}/db" }
-  let(:migration_config) {
-    { migration_version: 0,
-      migration_dir: migration_dir }
-  }
+  let(:migration_version) { 0 }
+
   
   context "migration" do
-    before { allow(job).to receive(:migration_config).and_return(migration_config) }
-    
     it { expect(job.id).to eq("job") }
     it { expect( job.migration_files.length ).to eq(1) }
-    it "#migrate" do
-      expect { job.migrate }.to output("test output\n").to_stdout
+    it "#migrate up" do
+      allow(job).to receive(:deploy_version).and_return(0)
+      expect { job.migrate }.to output("test output up\n").to_stdout
+    end 
+
+    it "#migrate down" do
+      allow(job).to receive(:deploy_version).and_return(2)
+      expect { job.migrate }.to output("test output down\n").to_stdout
     end 
   
     it "creates run models" do
@@ -76,6 +109,7 @@ END
     end
 
     it "successful run" do
+      ENV["JOB_SCHEMA_VERSION"] = "0"
       jr = job_exec.run
 
       # check this object

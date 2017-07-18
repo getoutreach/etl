@@ -93,7 +93,7 @@ END
     end
 
     it '#up_sql' do
-      expect( described_instance.up_sql ).to eq( "create table #{table} ( day datetime, attr varchar(100) )" )
+      expect( described_instance.up_sql ).to eq( "@client.execute(\"create table test_table ( day datetime, attr varchar(100) )\")" )
     end
 
     it '#execute' do
@@ -119,7 +119,7 @@ END
     end
 
     it '#up_sql' do
-      expect( described_instance.up_sql ).to eq( "create table #{table} ( day datetime, attr varchar(100) )" )
+      expect( described_instance.up_sql ).to eq( "@client.execute(\"create table test_table ( day datetime, attr varchar(100) )\")" )
     end
   end
 

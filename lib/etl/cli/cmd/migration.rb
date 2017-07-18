@@ -52,7 +52,7 @@ module ETL::Cli::Cmd
 
       def columns
         @columns ||= begin
-          raise "columns is not defined in the config file" unless table_config.include? :columns 
+          raise "columns are not defined in the config file" unless table_config.include? :columns 
           table_config[:columns]
         end
       end
