@@ -95,12 +95,12 @@ module ETL::Cli::Cmd
       def up_sql
         column_array = schema_map.map { |column, type| "#{column} #{type}" }
 
-        "@client.execute(\"create table #{@table} ( #{column_array.join(', ')} )\")"
+        up = <<END
+        @client.execute("create table #{@table} ( #{column_array.join(', ')} )")
+END
       end
 
       def down_sql
-        # Dont produce down function in first migration
-        return "" if migration_version == 0
         down = <<END
         @client.execute("drop table #{@table}")
 END

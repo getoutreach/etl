@@ -93,7 +93,11 @@ END
     end
 
     it '#up_sql' do
-      expect( described_instance.up_sql ).to eq( "@client.execute(\"create table test_table ( day datetime, attr varchar(100) )\")" )
+      expect( described_instance.up_sql.lstrip.rstrip ).to eq( "@client.execute(\"create table test_table ( day datetime, attr varchar(100) )\")" )
+    end
+
+    it '#down_sql' do
+      expect( described_instance.down_sql.lstrip.rstrip ).to eq( "@client.execute(\"drop table test_table\")" )
     end
 
     it '#execute' do
@@ -119,7 +123,11 @@ END
     end
 
     it '#up_sql' do
-      expect( described_instance.up_sql ).to eq( "@client.execute(\"create table test_table ( day datetime, attr varchar(100) )\")" )
+      expect( described_instance.up_sql.lstrip.rstrip ).to eq( "@client.execute(\"create table test_table ( day datetime, attr varchar(100) )\")" )
+    end
+
+    it '#down_sql' do
+      expect( described_instance.down_sql.lstrip.rstrip ).to eq( "@client.execute(\"drop table test_table\")" )
     end
   end
 
