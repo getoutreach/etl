@@ -8,11 +8,11 @@ module ETL::Job
     end
 
     def migration_dir
-      ""
+      Dir.pwd 
     end
 
     def target_version
-      0
+      1
     end
       
     def deploy_version
