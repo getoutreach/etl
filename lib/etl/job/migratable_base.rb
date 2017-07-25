@@ -15,11 +15,11 @@ module ETL::Job
       1
     end
 
-    def set_env_name(version)
+    def set_schema_version(version)
       ENV["#{env_name}"] = target_version.to_s 
     end
 
-    def get_env_name
+    def get_schema_version
       ENV["#{env_name}"]
     end
 
@@ -29,7 +29,7 @@ module ETL::Job
       
     def deploy_version
       @deploy_version ||= begin
-        version = get_env_name
+        version = get_schema_version
         raise "#{env_name} is not set" unless version
         version.to_i
       end
@@ -68,7 +68,7 @@ module ETL::Job
         break if current_version == goal_version
         current_version += move 
       end
-      set_env_name(target_version)
+      set_schema_version(target_version)
     end
 
     def run
