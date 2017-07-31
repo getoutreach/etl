@@ -31,6 +31,8 @@ require 'etl/job/result'
 require 'etl/job/base'
 require 'etl/job/manager'
 
+require 'etl/migration/redshift'
+
 base_file = 'base.rb'
 %w( input output transform queue batch_factory schedule ).each do |d|
   dir = "#{libdir}/#{d}"
