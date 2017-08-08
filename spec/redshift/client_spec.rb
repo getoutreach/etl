@@ -58,6 +58,13 @@ SQL
       client.unload_to_s3("select * from #{table_name}", s3_destination)
       client.copy_from_s3(target_table, s3_destination)
       expect(client.count_row_by_s3(s3_destination)).to eq(3)
+
+      sql = "select count(*) from #{target_table}"
+      result = client.execute(sql)
+
+      expect(result.first["count"].to_i).to eq(3)
+
+      # Delete s3 files
       client.delete_object_from_s3(bucket, table_name, table_name)
     end
   end
