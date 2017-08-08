@@ -58,7 +58,8 @@ SQL
 
     def count_row_by_s3(destination)
       sql = <<SQL
-        SELECT lines_scanned FROM stl_load_commits WHERE filename like 's3://#{destination}%'
+        SELECT c.lines_scanned FROM stl_load_commits c, stl_query q WHERE filename LIKE 's3://#{destination}%' 
+        AND c.query = q.query AND trim(q.querytxt) NOT LIKE 'COPY ANALYZE%'
 SQL
       results = execute(sql)
       loaded_rows = 0
@@ -66,9 +67,9 @@ SQL
       loaded_rows
     end
 
-    def unload_to_s3(sql, destination, delimiter = '|')
+    def unload_to_s3(query, destination, delimiter = '|')
       sql = <<SQL 
-        UNLOAD ('#{sql}') TO 's3://#{destination}'
+        UNLOAD ('#{query}') TO 's3://#{destination}'
         IAM_ROLE '#{@iam_role}'
         DELIMITER '#{delimiter}'
 SQL
@@ -106,7 +107,7 @@ SQL
     def delete_object_from_s3(bucket, prefix, session_name)
       s3 = Aws::S3::Client.new(region: @region, credentials: creds(session_name))
       resp = s3.list_objects(bucket: bucket)
-      keys = resp[:contents].select { |content| content[:key].start_with? prefix }.map { |content| content[:key] }
+      keys = resp[:contents].select { |content| content.key.start_with? prefix }.map { |content| content.key }
 
       keys.each { |key| s3.delete_object(bucket: bucket, key: key) }
     end
