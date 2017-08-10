@@ -7,14 +7,26 @@ module ETL::Cli::Cmd
     class List < ETL::Cli::Command
       option ['-m', '--match'], "REGEX", "List only jobs matching regular expression",
              attribute_name: :regex, default: // do |r| /#{r}/ end
+      option ['-d', '--dependency'], :flag, 'List jobs with dependencies'
 
       def execute
         ETL.load_user_classes
-        log.info("List of registered job IDs (classes):")
-        ETL::Job::Manager.instance.job_classes.select do |id, klass|
-          id =~ regex
-        end.each do |id, klass|
-          puts(" * #{id} (#{klass.name.to_s})")
+        if @dependency
+          parents = ETL::Job::Manager.instance.job_parents
+          puts("parents #{parents}")
+          log.info("List of registered job IDs (classes) with dependency:")
+          ETL::Job::Manager.instance.job_classes.select do |id, klass|
+            id =~ regex
+          end.each do |id, klass|
+            puts(" * #{id} (#{klass.name.to_s})")
+          end
+        else
+          log.info("List of registered job IDs (classes):")
+          ETL::Job::Manager.instance.job_classes.select do |id, klass|
+            id =~ regex
+          end.each do |id, klass|
+            puts(" * #{id} (#{klass.name.to_s})")
+          end
         end
       end
     end

@@ -2,14 +2,33 @@ require 'singleton'
 
 module ETL::Job
   class Manager
+    class Node
+      attr_reader :id
+      def initialize(id, child = nil)
+        @id = id
+        @childlen = []
+        add_child(child) unless child.nil?
+      end
+      
+      def add_child(child)
+        @childlen.push(child) unless @childlen.include? child
+      end
+
+      def ==(another_sock)
+        self.id == another_sock.id
+      end
+    end
+
     include Singleton
 
     # Map of id => Class
-    attr_accessor :job_classes, :job_class_factories
+    attr_accessor :job_classes, :job_class_factories, :job_parents
 
     def initialize
       @job_classes = {}
       @job_class_factories = {}
+      @job_dependencies = {}
+      @job_parents = []
     end
 
     # Registers a job class with the manager. This is typically called by
@@ -31,6 +50,32 @@ module ETL::Job
       end
 
       @job_classes[id_str] = klass
+    end
+
+    # Registers a job class that depends on parent job with the manager
+    def register_job_with_parent(id, p_id, klass, klass_factory=nil)
+      register(id, klass, klass_factory)
+      id_str = id.to_s
+      pid_str = p_id.to_s
+
+      ETL.logger.debug("Registering depedency with manager: #{id_str} => #{pid_str}")
+
+      node = @job_dependencies.fetch(id_str, Node.new(id_str))
+      if !@job_dependencies.include? pid_str
+        pnode = Node.new(pid_str)
+        pnode.add_child(node)
+        @job_parents.push(pnode)
+        puts "pnode #{pnode}, job_parents #{@job_parents}"
+        @job_parents.delete(node)
+        puts "job_parents #{@job_parents} #{@job_parents.include? node} node is #{node} id is #{id_str}"
+      else
+        pnode = @job_dependencies[pid_str]
+        pnode.add_child(node)
+      end
+
+      # Build a hash to keep dependencies
+      @job_dependencies[id_str] = node 
+      @job_dependencies[pid_str] = pnode 
     end
 
     # Returns the job class registered for the specified ID, or nil if none

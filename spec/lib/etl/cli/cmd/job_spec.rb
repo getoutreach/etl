@@ -46,6 +46,22 @@ RSpec.describe ETL::Cli::Cmd::Job::List do
   end
 end
 
+RSpec.describe ETL::Cli::Cmd::Job::List do
+  subject(:described_instance) do
+    described_class.new('etl job run', {}).tap do |cmd|
+      cmd.parse(args)
+    end
+  end
+  let(:args) { [] }
+
+  context 'with dependencies' do
+    let(:args) { ['--dependency'] }
+    it 'list dependencies' do
+      subject.execute
+    end
+  end
+end
+
 RSpec.describe ETL::Cli::Cmd::Job::Run do
   subject(:described_instance) do
     described_class.new('etl job run', {}).tap do |cmd|
