@@ -57,7 +57,22 @@ RSpec.describe ETL::Cli::Cmd::Job::List do
   context 'with dependencies' do
     let(:args) { ['--dependency'] }
     it 'list dependencies' do
+      $stdout = StringIO.new
       subject.execute
+      STDOUT.puts $stdout.string
+      arr = $stdout.string.split('\n')
+      expect(arr[0]).to start_with(" ***")
+      a1 = arr[0].index("a1")
+      a2 = arr[0].index("a2")
+      a3 = arr[0].index("a3")
+      expect(a1).to be < a2 
+      expect(a1).to be < a3 
+      
+      b1 = arr[0].index("b1")
+      b2 = arr[0].index("b2")
+      b3 = arr[0].index("b3")
+      expect(b1).to be < b3 
+      expect(b2).to be < b3 
     end
   end
 end

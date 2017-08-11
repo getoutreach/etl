@@ -65,9 +65,7 @@ module ETL::Job
         pnode = Node.new(pid_str)
         pnode.add_child(node)
         @job_parents.push(pnode)
-        puts "pnode #{pnode}, job_parents #{@job_parents}"
         @job_parents.delete(node)
-        puts "job_parents #{@job_parents} #{@job_parents.include? node} node is #{node} id is #{id_str}"
       else
         pnode = @job_dependencies[pid_str]
         pnode.add_child(node)
