@@ -64,3 +64,28 @@ class B3 < ETL::Test::DependencyJob
   register_job_with_parent("b1")
   register_job_with_parent("b2")
 end
+
+class C1 < ETL::Test::DependencyJob
+  register_job
+end
+
+class D1 < ETL::Test::DependencyJob
+  register_job
+end
+
+class C2 < ETL::Test::DependencyJob
+  register_job_with_parent("c1")
+end
+
+class CD2 < ETL::Test::DependencyJob
+  register_job_with_parent("c1")
+  register_job_with_parent("d1")
+end
+
+class CD3 < ETL::Test::DependencyJob
+  register_job_with_parent("c_d2")
+end
+
+class CD4 < ETL::Test::DependencyJob
+  register_job_with_parent("c_d3")
+end
