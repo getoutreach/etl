@@ -51,7 +51,7 @@ class A3 < ETL::Test::DependencyJob
   register_job_with_parent("a1")
 end
 
-# B1 and B2 are parents og B3
+# B1 and B2 are parents of B3
 class B1 < ETL::Test::DependencyJob
   register_job
 end
