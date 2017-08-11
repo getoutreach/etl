@@ -9,16 +9,38 @@ module ETL::Cli::Cmd
              attribute_name: :regex, default: // do |r| /#{r}/ end
       option ['-d', '--dependency'], :flag, 'List jobs with dependencies'
 
+      def bfs(parents)
+        output = [] 
+        queue = parents 
+        visited = []
+
+        while !queue.empty?
+          node = queue.shift
+
+          unless visited.include? node
+            output.push(node.id)
+            visited.push(node)
+          end
+          node.childlen.each { |c| queue.push(c) }
+        end
+        output
+      end
+
       def execute
         ETL.load_user_classes
         if @dependency
           parents = ETL::Job::Manager.instance.job_parents
-          puts("parents #{parents}")
-          log.info("List of registered job IDs (classes) with dependency:")
+          dependencies_jobs = bfs(parents)
+          d_jobs = dependencies_jobs.select { |id| id =~ regex }
+
+          # Dependencies_jobs sorted by the order to be executed
+          puts(" *** #{d_jobs.join(' ')}")
+
+          # Independent_jobs          
           ETL::Job::Manager.instance.job_classes.select do |id, klass|
             id =~ regex
           end.each do |id, klass|
-            puts(" * #{id} (#{klass.name.to_s})")
+            puts(" * #{id} (#{klass.name.to_s})") unless dependencies_jobs.include? id
           end
         else
           log.info("List of registered job IDs (classes):")

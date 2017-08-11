@@ -3,7 +3,7 @@ require 'singleton'
 module ETL::Job
   class Manager
     class Node
-      attr_reader :id
+      attr_reader :id, :childlen
       def initialize(id, child = nil)
         @id = id
         @childlen = []
