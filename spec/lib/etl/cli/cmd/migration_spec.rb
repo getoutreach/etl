@@ -285,6 +285,11 @@ END
     it '#down_sql' do
       expect( described_instance.down_sql.lstrip.rstrip ).to eq( "@client.execute('drop table test_table')" )
     end
+
+    it '#execute' do
+      described_instance.execute
+      expect(File).to exist("#{dir}/#{table}_0001.rb") 
+    end
   end
 end
 
