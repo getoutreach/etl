@@ -27,7 +27,6 @@ RSpec.describe ETL::Cli::Cmd::Job::List do
 
   before(:each) do
     allow(ETL::Job::Manager.instance).to receive(:job_classes).and_return(REGISTERED_JOBS)
-    allow(ETL::Job::Manager.instance).to receive(:job_parents).and_return([])
   end
 
   context 'with no args' do
