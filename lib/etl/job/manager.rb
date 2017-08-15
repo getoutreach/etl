@@ -3,15 +3,15 @@ require 'singleton'
 module ETL::Job
   class Manager
     class Node
-      attr_reader :id, :childlen
+      attr_reader :id, :children
       def initialize(id, child = nil)
         @id = id
-        @childlen = []
+        @children = []
         add_child(child) unless child.nil?
       end
       
       def add_child(child)
-        @childlen.push(child) unless @childlen.include? child
+        @children.push(child) unless @children.include? child
       end
 
       def ==(another_sock)
@@ -54,11 +54,12 @@ module ETL::Job
 
     # Registers a job class that depends on parent job with the manager
     def register_job_with_parent(id, p_id, klass, klass_factory=nil)
+      puts "register with p #{id}, #{p_id}"
       register(id, klass, klass_factory)
       id_str = id.to_s
       pid_str = p_id.to_s
 
-      ETL.logger.debug("Registering depedency with manager: #{id_str} => #{pid_str}")
+      ETL.logger.debug("Registering dependency with manager: #{id_str} => #{pid_str}")
 
       node = @job_dependencies.fetch(id_str, Node.new(id_str))
       if !@job_dependencies.include? pid_str

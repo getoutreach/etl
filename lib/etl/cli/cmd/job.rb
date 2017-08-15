@@ -7,7 +7,6 @@ module ETL::Cli::Cmd
     class List < ETL::Cli::Command
       option ['-m', '--match'], "REGEX", "List only jobs matching regular expression",
              attribute_name: :regex, default: // do |r| /#{r}/ end
-      option ['-d', '--dependency'], :flag, 'List jobs with dependencies'
 
       def bfs(parents)
         output = [] 
@@ -21,34 +20,26 @@ module ETL::Cli::Cmd
             output.push(node.id)
             visited.push(node)
           end
-          node.childlen.each { |c| queue.push(c) }
+          node.children.each { |c| queue.push(c) }
         end
         output
       end
 
       def execute
         ETL.load_user_classes
-        if @dependency
-          parents = ETL::Job::Manager.instance.job_parents
-          dependencies_jobs = bfs(parents)
-          d_jobs = dependencies_jobs.select { |id| id =~ regex }
+        parents = ETL::Job::Manager.instance.job_parents
+        puts "parents #{parents}"
+        dependencies_jobs = bfs(parents)
+        d_jobs = dependencies_jobs.select { |id| id =~ regex }
 
-          # Dependencies_jobs sorted by the order to be executed
-          puts(" *** #{d_jobs.join(' ')}")
+        # Dependencies_jobs sorted by the order to be executed
+        puts(" *** #{d_jobs.join(' ')}") unless d_jobs.empty?
 
-          # Independent_jobs          
-          ETL::Job::Manager.instance.job_classes.select do |id, klass|
-            id =~ regex
-          end.each do |id, klass|
-            puts(" * #{id} (#{klass.name.to_s})") unless dependencies_jobs.include? id
-          end
-        else
-          log.info("List of registered job IDs (classes):")
-          ETL::Job::Manager.instance.job_classes.select do |id, klass|
-            id =~ regex
-          end.each do |id, klass|
-            puts(" * #{id} (#{klass.name.to_s})")
-          end
+        # Independent_jobs          
+        ETL::Job::Manager.instance.job_classes.select do |id, klass|
+          id =~ regex
+        end.each do |id, klass|
+          puts(" * #{id} (#{klass.name.to_s})") unless d_jobs.include? id
         end
       end
     end

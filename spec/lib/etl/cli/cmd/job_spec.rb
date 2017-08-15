@@ -17,6 +17,8 @@ REGISTERED_JOBS = {
   'null' => ETL::Test::Null
 }
 
+ETL::Job::Manager.Node.new()
+
 RSpec.describe ETL::Cli::Cmd::Job::List do
   subject(:described_instance) do
     described_class.new('etl job run', {}).tap do |cmd|
@@ -27,6 +29,7 @@ RSpec.describe ETL::Cli::Cmd::Job::List do
 
   before(:each) do
     allow(ETL::Job::Manager.instance).to receive(:job_classes).and_return(REGISTERED_JOBS)
+    allow(ETL::Job::Manager.instance).to receive(:job_parents).and_return([])
   end
 
   context 'with no args' do
@@ -42,67 +45,6 @@ RSpec.describe ETL::Cli::Cmd::Job::List do
     it 'lists matches' do
       expect(STDOUT).to receive(:puts).with(/ * #{filter}/)
       subject.execute
-    end
-  end
-end
-
-RSpec.describe ETL::Cli::Cmd::Job::List do
-  subject(:described_instance) do
-    described_class.new('etl job run', {}).tap do |cmd|
-      cmd.parse(args)
-    end
-  end
-  let(:args) { [] }
-
-  context 'with dependencies' do
-    let(:args) { ['--dependency'] }
-    it 'list dependencies' do
-      $stdout = StringIO.new
-      subject.execute
-      arr = $stdout.string.split('\n')
-      expect(arr[0]).to start_with(" ***")
-      a1 = arr[0].index("a1")
-      a2 = arr[0].index("a2")
-      a3 = arr[0].index("a3")
-      expect(a1).to be < a2 
-      expect(a1).to be < a3 
-
-      b1 = arr[0].index("b1")
-      b2 = arr[0].index("b2")
-      b3 = arr[0].index("b3")
-      expect(b1).to be < b3 
-      expect(b2).to be < b3 
-
-      c1 = arr[0].index("c1")
-      c2 = arr[0].index("c2")
-      d1 = arr[0].index("d1")
-      cd2 = arr[0].index("c_d2")
-      cd3 = arr[0].index("c_d3")
-      expect(c1).to be < c2 
-      expect(c1).to be < cd2 
-      expect(d1).to be < cd2 
-      expect(cd2).to be < cd3 
-    end
-  end
-
-  context 'with dependencies and filter' do
-    let(:filter) { 'b' }
-    let(:args) { ['--dependency', '--match', filter] }
-    it 'list dependencies with filter' do
-      $stdout = StringIO.new
-      subject.execute
-      arr = $stdout.string.split('\n')
-      expect(arr[0]).to start_with(" ***")
-      a1 = arr[0].index("a1")
-      c1 = arr[0].index("c1")
-      expect(a1).to be nil 
-      expect(c1).to be nil 
-
-      b1 = arr[0].index("b1")
-      b2 = arr[0].index("b2")
-      b3 = arr[0].index("b3")
-      expect(b1).to be < b3 
-      expect(b2).to be < b3 
     end
   end
 end

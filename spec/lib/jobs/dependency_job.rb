@@ -83,9 +83,9 @@ class CD2 < ETL::Test::DependencyJob
 end
 
 class CD3 < ETL::Test::DependencyJob
-  register_job_with_parent("c_d2")
+  register_job_with_parent("cd2")
 end
 
 class CD4 < ETL::Test::DependencyJob
-  register_job_with_parent("c_d3")
+  register_job_with_parent("cd3")
 end
