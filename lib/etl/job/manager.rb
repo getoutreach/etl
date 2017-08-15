@@ -22,7 +22,7 @@ module ETL::Job
     include Singleton
 
     # Map of id => Class
-    attr_accessor :job_classes, :job_class_factories, :job_parents
+    attr_accessor :job_classes, :job_class_factories
 
     def initialize
       @job_classes = {}
@@ -76,7 +76,7 @@ module ETL::Job
       @job_dependencies[pid_str] = pnode 
     end
 
-    def bfs
+    def sorted_dependent_jobs 
       output = [] 
       queue = @job_parents 
       visited = []

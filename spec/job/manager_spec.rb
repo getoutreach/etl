@@ -127,7 +127,7 @@ RSpec.describe "manager" do
       cd4 = ManagerDependencyTests::CD4.new(::ETL::Batch.new)
       manager.register_job_with_parent(cd4.id, "cd3", cd4.class)
 
-      nodes = manager.bfs
+      nodes = manager.sorted_dependent_jobs
       a1_index = nodes.index("a1") 
       a2_index = nodes.index("a2") 
       a3_index = nodes.index("a3") 
