@@ -28,7 +28,6 @@ module ETL::Cli::Cmd
       def execute
         ETL.load_user_classes
         parents = ETL::Job::Manager.instance.job_parents
-        puts "parents #{parents}"
         dependencies_jobs = bfs(parents)
         d_jobs = dependencies_jobs.select { |id| id =~ regex }
 
