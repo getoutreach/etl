@@ -35,40 +35,30 @@ module ManagerDependencyTests
   end
 
   class A2 < ETL::Job::Base
-    register_job_with_parent("a1")
   end
 
   class A3 < ETL::Job::Base
-    register_job_with_parent("a1")
   end
 
   class A4 < ETL::Job::Base
-    register_job_with_parent("a3")
   end
 
   class C1 < ETL::Job::Base
-    register_job
   end
 
   class D1 < ETL::Job::Base
-    register_job
   end
 
   class C2 < ETL::Job::Base
-    register_job_with_parent("c1")
   end
 
   class CD2 < ETL::Job::Base
-    register_job_with_parent("c1")
-    register_job_with_parent("d1")
   end
 
   class CD3 < ETL::Job::Base
-    register_job_with_parent("cd2")
   end
 
   class CD4 < ETL::Job::Base
-    register_job_with_parent("cd3")
   end
 end
 
