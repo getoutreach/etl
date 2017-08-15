@@ -155,6 +155,16 @@ END
       def define_table(table_name, schema, pks = [])
         t = ETL::Redshift::Table.new(table_name)
 
+        # Create auto-increment key if scd
+        if scd?
+          auto_key = "#{table_name}_id".to_sym
+          t.int(auto_key)
+          temp_hash = {}
+          temp_hash[auto_key] = { key: "identity" } 
+          temp_hash.merge!(schema)
+          schema.replace temp_hash
+        end
+
         schema.each do |key, type|
           if type.is_a? Hash 
             define_type(t, key, type[:type])
