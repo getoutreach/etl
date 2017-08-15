@@ -17,8 +17,6 @@ REGISTERED_JOBS = {
   'null' => ETL::Test::Null
 }
 
-ETL::Job::Manager.Node.new()
-
 RSpec.describe ETL::Cli::Cmd::Job::List do
   subject(:described_instance) do
     described_class.new('etl job run', {}).tap do |cmd|
