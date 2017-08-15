@@ -54,12 +54,11 @@ module ETL::Job
 
     # Registers a job class that depends on parent job with the manager
     def register_job_with_parent(id, p_id, klass, klass_factory=nil)
-      puts "register with p #{id}, #{p_id}"
       register(id, klass, klass_factory)
       id_str = id.to_s
       pid_str = p_id.to_s
 
-      ETL.logger.debug("Registering dependency with manager: #{id_str} => #{pid_str}")
+      ETL.logger.debug("Registering dependency with manager: #{id_str} depends on #{pid_str}")
 
       node = @job_dependencies.fetch(id_str, Node.new(id_str))
       if !@job_dependencies.include? pid_str
@@ -75,6 +74,23 @@ module ETL::Job
       # Build a hash to keep dependencies
       @job_dependencies[id_str] = node 
       @job_dependencies[pid_str] = pnode 
+    end
+
+    def bfs
+      output = [] 
+      queue = @job_parents 
+      visited = []
+
+      while !queue.empty?
+        node = queue.shift
+
+        unless visited.include? node
+          output.push(node.id)
+          visited.push(node)
+        end
+        node.children.each { |c| queue.push(c) }
+      end
+      output
     end
 
     # Returns the job class registered for the specified ID, or nil if none

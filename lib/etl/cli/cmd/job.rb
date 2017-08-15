@@ -27,8 +27,7 @@ module ETL::Cli::Cmd
 
       def execute
         ETL.load_user_classes
-        parents = ETL::Job::Manager.instance.job_parents
-        dependencies_jobs = bfs(parents)
+        dependencies_jobs = ETL::Job::Manager.instance.bfs
         d_jobs = dependencies_jobs.select { |id| id =~ regex }
 
         # Dependencies_jobs sorted by the order to be executed

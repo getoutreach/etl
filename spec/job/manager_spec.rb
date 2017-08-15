@@ -70,23 +70,6 @@ module ManagerDependencyTests
   class CD4 < ETL::Job::Base
     register_job_with_parent("cd3")
   end
-
-  def self.bfs(parents)
-    output = [] 
-    queue = parents 
-    visited = []
-
-    while !queue.empty?
-      node = queue.shift
-
-      unless visited.include? node
-        output.push(node.id)
-        visited.push(node)
-      end
-      node.children.each { |c| queue.push(c) }
-    end
-    output
-  end
 end
 
 RSpec.describe "manager" do
@@ -144,8 +127,7 @@ RSpec.describe "manager" do
       cd4 = ManagerDependencyTests::CD4.new(::ETL::Batch.new)
       manager.register_job_with_parent(cd4.id, "cd3", cd4.class)
 
-      parents = manager.job_parents
-      nodes = ManagerDependencyTests.bfs(parents)
+      nodes = manager.bfs
       a1_index = nodes.index("a1") 
       a2_index = nodes.index("a2") 
       a3_index = nodes.index("a3") 
