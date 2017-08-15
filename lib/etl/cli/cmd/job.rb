@@ -8,23 +8,6 @@ module ETL::Cli::Cmd
       option ['-m', '--match'], "REGEX", "List only jobs matching regular expression",
              attribute_name: :regex, default: // do |r| /#{r}/ end
 
-      def bfs(parents)
-        output = [] 
-        queue = parents 
-        visited = []
-
-        while !queue.empty?
-          node = queue.shift
-
-          unless visited.include? node
-            output.push(node.id)
-            visited.push(node)
-          end
-          node.children.each { |c| queue.push(c) }
-        end
-        output
-      end
-
       def execute
         ETL.load_user_classes
         dependencies_jobs = ETL::Job::Manager.instance.bfs
