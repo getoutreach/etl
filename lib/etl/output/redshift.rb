@@ -236,9 +236,12 @@ SQL
           # Remove line break from all columns so that Redshift can detect delimiter
           # Need this method since ESCAPE option with COPY command on Redshift does not work
           row = erow.each_with_object({}) do |r, h|
-            v = r[1]
-            v.tr!("\n", " ") if v.is_a? String
-            h[r[0].to_s] = v
+            if r[1].is_a? String
+              v = r[1].gsub("\n", " ")
+              h[r[0].to_s] = v
+            else
+              h[r[0].to_s] = r[1]
+            end
           end
 
           if schema && !schema.columns.empty? 
