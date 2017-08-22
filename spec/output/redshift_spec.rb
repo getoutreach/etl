@@ -74,6 +74,23 @@ class TestRedshiftCreatetable1 < ETL::Output::Redshift
   end
 end
 
+RSpec.describe "redshift independent functions" do
+  let(:rs) {TestRedshiftCreate1.new(:insert, "test")}
+
+  it 'trim_newline with non-string' do
+    expect(rs.trim_newline(3)).to eq(3)
+  end
+
+  it 'trim_newline with strings that do not have new lines' do
+    expect(rs.trim_newline("trim_newline")).to eq("trim_newline")
+  end
+
+  it 'trim_newline with strings that have new lines' do
+    expect(rs.trim_newline("trim\nnewline")).to eq("trim newline")
+    expect(rs.trim_newline("trim\nnewline\n")).to eq("trim newline ")
+  end
+end
+
 RSpec.describe "redshift create table" do
   let(:load_strategy) { :insert }
   let(:table_name) { "test_1" }
