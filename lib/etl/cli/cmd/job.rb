@@ -53,7 +53,7 @@ module ETL::Cli::Cmd
         begin
           ETL.load_user_classes
         rescue StandardError => e
-          @notifier.notify("Running jobs failed: #{e.to_s}") unless notifier.nil?
+          notifier.notify("Running jobs failed: #{e.to_s}") unless notifier.nil?
           throw
         end
 
@@ -76,7 +76,7 @@ module ETL::Cli::Cmd
               begin
                 run_batch(id, batch)
               rescue StandardError => e
-                @notifier.notify("Running batch #{batch.to_s} failed: #{e.to_s}") unless notifier.nil?
+                notifier.notify("Running batch #{batch.to_s} failed: #{e.to_s}") unless notifier.nil?
               end
             end
           end
