@@ -15,7 +15,7 @@ module ETL::Cli::Cmd
         begin
           ETL.load_user_classes
         rescue StandardError => e
-          @notifier.notify("Listing jobs failed: #{e.to_s}") unless notifier.nil?
+          notifier.notify("Listing jobs failed: #{e.to_s}") unless notifier.nil?
           throw
         end
         dependencies_jobs = ETL::Job::Manager.instance.sorted_dependent_jobs
