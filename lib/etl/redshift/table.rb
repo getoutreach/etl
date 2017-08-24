@@ -88,9 +88,9 @@ module ETL
           when "boolean"
             t.boolean(col_name)
           when "timestamp"
-            t.date(col_name)
+            t.timestamp(col_name)
           when "timestamptz"
-            t.datetz(col_name)
+            t.timestamp(col_name)
           when "date"
             t.date(col_name)
           when "text"
