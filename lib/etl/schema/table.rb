@@ -68,6 +68,10 @@ module ETL::Schema
       add_column(name, :date, nil, nil, &block)
     end
 
+    def timestamp(name, &block)
+      add_column(name, :timestamp, nil, nil, &block)
+    end
+
     def defaultdate(name, dtype="GETDATE()", &block)
       sym = "datetime default #{dtype}".to_sym
       add_column(name, sym, nil, nil, &block)

@@ -83,7 +83,7 @@ module ETL::Input
     def get_schema_map
       schema = field_keys
       tag_keys.each { |tag| schema[tag.to_sym] = :string if !schema.keys.include?(tag.to_sym) }
-      {:time => :date}.merge(schema)
+      {:time => :timestamp}.merge(schema)
     end
 
     def get_field_keys 
