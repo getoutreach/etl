@@ -13,7 +13,7 @@ module ETL::Output
     def initialize(client, main_table_name, optional_history_table_name, surrogate_key, natural_keys, scd_columns)
       super()
       @client = client
-      @delimiter = '\001'
+      @delimiter = '\\001'
       @surrogate_key = surrogate_key
       @natural_keys = natural_keys
       @main_table_name = main_table_name
