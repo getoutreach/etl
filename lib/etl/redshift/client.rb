@@ -132,7 +132,6 @@ SQL
         IAM_ROLE '#{@iam_role}'
         TIMEFORMAT AS 'auto'
         DATEFORMAT AS 'auto'
-        ESCAPE
         DELIMITER '#{delimiter}'
         REGION '#{@region}'
 SQL

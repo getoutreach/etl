@@ -98,7 +98,6 @@ module ETL::Output
         IAM_ROLE '#{@aws_params[:role_arn]}'
         TIMEFORMAT AS 'auto'
         DATEFORMAT AS 'auto'
-        ESCAPE
         DELIMITER '#{@delimiter}'
         REGION '#{@aws_params[:region]}'
 SQL
@@ -203,7 +202,6 @@ SQL
         IAM_ROLE '#{@aws_params[:role_arn]}'
         TIMEFORMAT AS 'auto'
         DATEFORMAT AS 'auto'
-        ESCAPE
         DELIMITER '#{@delimiter}'
         REGION '#{@aws_params[:region]}'
 SQL
