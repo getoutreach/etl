@@ -116,7 +116,7 @@ SQL
       loaded_rows
     end
 
-    def unload_to_s3(query, destination, delimiter = '|')
+    def unload_to_s3(query, destination, delimiter = '\\001')
       sql = <<SQL
         UNLOAD ('#{query}') TO 's3://#{destination}'
         IAM_ROLE '#{@iam_role}'
@@ -125,7 +125,7 @@ SQL
       execute(sql)
     end
 
-    def copy_from_s3(table_name, destination, delimiter = '|')
+    def copy_from_s3(table_name, destination, delimiter = '\\001')
       sql = <<SQL
         COPY #{table_name}
         FROM 's3://#{destination}'
@@ -151,7 +151,7 @@ SQL
 
     # Upserts rows into the destintation tables based on rows
     # provided by the reader.
-    def upsert_rows(reader, table_schemas_lookup, transformer, delimiter='|')
+    def upsert_rows(reader, table_schemas_lookup, transformer, delimiter='\\001')
       # write csv files
       arr = write_csv_files(reader, table_schemas_lookup, transformer, delimiter)
       rows_processed = arr[0]
@@ -204,7 +204,7 @@ SQL
       tmp_table_name
     end
 
-    def write_csv_files(reader, table_schemas_lookup, row_transformer, delimiter = '|')
+    def write_csv_files(reader, table_schemas_lookup, row_transformer, delimiter = '\\001')
       # Remove new lines ensures that all row values have newlines removed.
       remove_new_lines = ::ETL::Transform::RemoveNewlines.new
       row_transformers = [remove_new_lines]
