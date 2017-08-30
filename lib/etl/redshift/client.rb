@@ -15,7 +15,7 @@ module ETL::Redshift
   # Class that contains shared logic for accessing Redshift.
   class Client
     include ETL::CachedLogger
-    attr_accessor :db, :region, :iam_role, :bucket
+    attr_accessor :db, :region, :iam_role, :bucket, :delimiter
 
     # when odbc driver is fully working the use redshift driver can
     # default to true
@@ -26,6 +26,7 @@ module ETL::Redshift
       @iam_role = aws_params.fetch(:role_arn, '')
       @bucket = aws_params.fetch(:s3_bucket, '')
       @random_key = [*('a'..'z'),*('0'..'9')].shuffle[0,10].join
+      @delimiter = "\u0001"
       ObjectSpace.define_finalizer(self, proc { db.disconnect })
     end
 
@@ -116,23 +117,23 @@ SQL
       loaded_rows
     end
 
-    def unload_to_s3(query, destination, delimiter = '\\001')
+    def unload_to_s3(query, destination)
       sql = <<SQL
         UNLOAD ('#{query}') TO 's3://#{destination}'
         IAM_ROLE '#{@iam_role}'
-        DELIMITER '#{delimiter}'
+        DELIMITER '#{@delimiter}'
 SQL
       execute(sql)
     end
 
-    def copy_from_s3(table_name, destination, delimiter = '\\001')
+    def copy_from_s3(table_name, destination)
       sql = <<SQL
         COPY #{table_name}
         FROM 's3://#{destination}'
         IAM_ROLE '#{@iam_role}'
         TIMEFORMAT AS 'auto'
         DATEFORMAT AS 'auto'
-        DELIMITER '#{delimiter}'
+        DELIMITER '#{@delimiter}'
         REGION '#{@region}'
 SQL
       execute(sql)
@@ -150,7 +151,7 @@ SQL
 
     # Upserts rows into the destintation tables based on rows
     # provided by the reader.
-    def upsert_rows(reader, table_schemas_lookup, transformer, delimiter='\\001')
+    def upsert_rows(reader, table_schemas_lookup, transformer)
       # write csv files
       arr = write_csv_files(reader, table_schemas_lookup, transformer)
       rows_processed = arr[0]
@@ -177,7 +178,7 @@ SQL
         pks = table_schema.primary_key
         s3_path = "#{@bucket}/#{s3_file_names[t]}"
 
-        copy_from_s3(tmp_table, s3_path, delimiter)
+        copy_from_s3(tmp_table, s3_path)
         delete_sql = <<SQL
           DELETE FROM #{t}
           USING #{tmp_table} s
@@ -203,7 +204,7 @@ SQL
       tmp_table_name
     end
 
-    def write_csv_files(reader, table_schemas_lookup, row_transformer, delimiter = "\u0001")
+    def write_csv_files(reader, table_schemas_lookup, row_transformer)
       # Remove new lines ensures that all row values have newlines removed.
       remove_new_lines = ::ETL::Transform::RemoveNewlines.new
       row_transformers = [remove_new_lines]
@@ -214,7 +215,7 @@ SQL
 
       table_schemas_lookup.keys.each do |t|
         csv_file_paths[t] = Tempfile.new(t)
-        csv_files[t] = ::CSV.open(csv_file_paths[t], "w", {:col_sep => delimiter } )
+        csv_files[t] = ::CSV.open(csv_file_paths[t], "w", {:col_sep => @delimiter } )
       end
 
       rows_processed = 0
