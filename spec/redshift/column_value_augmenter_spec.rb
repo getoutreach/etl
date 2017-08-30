@@ -44,7 +44,7 @@ RSpec.describe "redshift column_augmenter" do
       column_augmenter = ::ETL::Redshift::ColumnValueAugmenter.new(client, table_schema, ["dw_id"], ["id"], ["info"], nil)
       # Wrapping the column augmenter so that rows that don't have dw_id's set will get values
       augmenter = Test::Augmenter.new(column_augmenter)
-      client.upsert_rows(input, {table_schema.name => table_schema}, augmenter, '|')
+      client.upsert_rows(input, {table_schema.name => table_schema}, augmenter)
 
       r = client.execute("Select * from #{table_name} ORDER BY dw_id")
       values = []
