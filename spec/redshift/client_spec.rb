@@ -87,7 +87,7 @@ SQL
       ]
       input = ETL::Input::Array.new(data)
       simple_orgs_schema = client.table_schema("simple_orgs_2")
-      client.upsert_rows(input, { "simple_orgs" => simple_orgs_schema }, nil, '|')
+      client.upsert_rows(input, { "simple_orgs" => simple_orgs_schema }, nil)
       r = client.execute("Select * from simple_orgs")
       expect(r.ntuples).to eq(4)
       sorted_values = r.values.sort_by { |value| value[0] }
