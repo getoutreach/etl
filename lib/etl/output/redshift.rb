@@ -226,7 +226,7 @@ SQL
       @client.create_table(schema) if @create_table
       # Load data into temp csv
       # If the table exists, use the order of columns. Otherwise, use @header
-      ::CSV.open(csv_file.path, "w", {:col_sep => @delimiter } ) do |c|
+      ::CSV.open(csv_file.path, "w", {:col_sep => "\u0001"} ) do |c|
         reader.each_row do |erow|
           # Remove line break from all columns so that Redshift can detect delimiter
           # Need this method since ESCAPE option with COPY command on Redshift does not work

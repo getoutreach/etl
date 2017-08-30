@@ -151,7 +151,7 @@ SQL
     # Upserts rows into the destintation tables based on rows
     # provided by the reader.
     def upsert_rows(reader, table_schemas_lookup, transformer, delimiter='\\001')
-      # write csv files
+      # write csv file
       arr = write_csv_files(reader, table_schemas_lookup, transformer, delimiter)
       rows_processed = arr[0]
       file_paths = arr[1]
@@ -203,7 +203,7 @@ SQL
       tmp_table_name
     end
 
-    def write_csv_files(reader, table_schemas_lookup, row_transformer, delimiter = '^A')
+    def write_csv_files(reader, table_schemas_lookup, row_transformer, delimiter = "\u0001")
       # Remove new lines ensures that all row values have newlines removed.
       remove_new_lines = ::ETL::Transform::RemoveNewlines.new
       row_transformers = [remove_new_lines]
