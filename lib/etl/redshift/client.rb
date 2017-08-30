@@ -151,7 +151,7 @@ SQL
     # Upserts rows into the destintation tables based on rows
     # provided by the reader.
     def upsert_rows(reader, table_schemas_lookup, transformer, delimiter='\\001')
-      # write csv file
+      # write csv files
       arr = write_csv_files(reader, table_schemas_lookup, transformer)
       rows_processed = arr[0]
       file_paths = arr[1]
