@@ -87,22 +87,20 @@ module ETL::Output
       @history_table_schema = history_table_schema
       @client = client
       @now_generator = now_generator
+      @table_schemas_lookup = { @main_table_schema.name => @main_table_schema }
+      @table_schemas_lookup[@history_table_schema.name] = @history_table_schema if !@history_table_schema.nil?
+      @date_table_id_augmenter = ::ETL::Redshift::DateTableIDAugmenter.new(@table_schemas_lookup.values)
+      @column_augmenter = ::ETL::Redshift::ColumnValueAugmenter.new(@client, @history_table_schema, @surrogate_key, @natural_keys, @scd_columns, nil)
+      @row_splitter = ::ETL::Transform::SplitRow.SplitByTableSchemas(@table_schemas_lookup.values)
     end
 
     def transform(row)
       named_rows = {}
       # Conditionally creates more named rows based on the
       # change in the row
-      table_schemas_lookup = { @main_table_schema.name => @main_table_schema }
-      table_schemas_lookup[@history_table_schema.name] = @history_table_schema if !@history_table_schema.nil?
-
-      date_table_id_augmenter = ::ETL::Redshift::DateTableIDAugmenter.new(table_schemas_lookup.values)
-      row = date_table_id_augmenter.transform(row)
-      column_augmenter = ::ETL::Redshift::ColumnValueAugmenter.new(@client, @history_table_schema, @surrogate_key, @natural_keys, @scd_columns, nil)
-      row = column_augmenter.transform(row)
-
-      row_splitter = ::ETL::Transform::SplitRow.SplitByTableSchemas(table_schemas_lookup.values)
-      named_rows = row_splitter.transform(row)
+      row = @date_table_id_augmenter.transform(row)
+      row = @column_augmenter.transform(row)
+      named_rows = @row_splitter.transform(row)
 
       raise "data table #{@main_table_schema.name} must only have one pk" if !@main_table_schema.primary_key.count == 1
       raise "history table #{@history_table_schema.name} must only have one pk" if !@history_table_schema.primary_key.count == 1
