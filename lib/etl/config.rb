@@ -119,7 +119,6 @@ module ETL
         sqs_hash = {}
         sqs_hash[:url] = ENV.fetch('ETL_SQS_QUEUE_URL')
         sqs_hash[:region] = ENV.fetch('ETL_SQS_REGION')
-        sqs_hash[:iam_role] = ENV.fetch('ETL_SQS_IAM_ROLE')
         @sqs = sqs_hash
       end
       yield @sqs if block_given?
