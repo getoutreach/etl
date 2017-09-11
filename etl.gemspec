@@ -29,6 +29,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'influxdb'
   spec.add_dependency 'pg'
   spec.add_dependency 'aws-sdk'
+  spec.add_dependency 'aws-sdk-sqs'
   spec.add_dependency 'slack-notifier'
 
   spec.add_development_dependency 'bunny'

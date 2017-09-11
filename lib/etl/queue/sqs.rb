@@ -1,5 +1,6 @@
 require 'etl/core'
 require 'etl/queue/payload'
+require 'aws-sdk-sqs'
 
 module ETL::Queue
 
