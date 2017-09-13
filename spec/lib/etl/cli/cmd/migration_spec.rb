@@ -228,7 +228,7 @@ END
     it '#up_sql' do
       expect( described_instance.up_sql(false).lstrip.rstrip ).to eq( 
 "table = ::ETL::Redshift::Table.new('test_table')
-table.add_column('day', 'date', nil, nil)
+table.add_column('day', 'timestamp', nil, nil)
 table.add_column('attr', 'varchar (100)', nil, nil)
 
 @client.create_table(table)" )
@@ -260,13 +260,13 @@ table.add_column('attr', 'varchar (100)', nil, nil)
       expect( described_instance.up_sql(true).lstrip.rstrip ).to eq(
 "table = ::ETL::Redshift::Table.new('test_table')
 table.add_column('test_table_id', 'int', nil, nil)
-table.add_column('day', 'date', nil, nil)
+table.add_column('day', 'timestamp', nil, nil)
 table.add_column('attr', 'varchar (100)', nil, nil)
 
 @client.create_table(table)
 table = ::ETL::Redshift::Table.new('test_table_history')
 table.add_column('test_table_history_id', 'int', nil, nil)
-table.add_column('day', 'date', nil, nil)
+table.add_column('day', 'timestamp', nil, nil)
 
 @client.create_table(table)" )
     end
@@ -313,14 +313,14 @@ table.add_column('day', 'date', nil, nil)
       expect( described_instance.up_sql(true).lstrip.rstrip ).to eq(
 "table = ::ETL::Redshift::Table.new('test_table')
 table.add_column('test_table_id', 'int', nil, nil)
-table.add_column('day', 'date', nil, nil)
+table.add_column('day', 'timestamp', nil, nil)
 table.add_column('attr', 'varchar (100)', nil, nil)
 table.primary_key = ['day']
 
 @client.create_table(table)
 table = ::ETL::Redshift::Table.new('test_table_history')
 table.add_column('test_table_history_id', 'int', nil, nil)
-table.add_column('day', 'date', nil, nil)
+table.add_column('day', 'timestamp', nil, nil)
 table.primary_key = ['day']
 
 @client.create_table(table)" )
