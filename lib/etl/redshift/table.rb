@@ -129,7 +129,7 @@ module ETL
           width = "#{c.width}" unless c.width.nil?
           precision = "nil"
           width = "#{c.precision}" unless c.precision.nil?
-          code = code + "table.add_columns('#{key}', :#{c.type}, #{width}, #{precision})\n"
+          code = code + "table.add_column('#{key}', '#{c.type}', #{width}, #{precision})\n"
         end
         code = code + "table.primary_key = [#{@primary_key.map { |k| "'#{k}'"}.join(",")}]\n" unless @primary_key.empty?
         code = code + "table.dist_key = '#{@dist_key}'\n" unless @dist_key.empty?
