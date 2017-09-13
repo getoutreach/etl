@@ -122,7 +122,7 @@ module ETL::Cli::Cmd
         generator.down = down
         generator.table = table.capitalize
         generator.version = version
-        migration_file << ERB.new(template).result(generator.template_binding)
+        migration_file << ERB.new(template, nil, '-').result(generator.template_binding)
         migration_file.close
       end
 
@@ -203,7 +203,7 @@ END
         when :text
           table.varchar(key.to_sym, "max")
         when :datetime
-          table.date(key.to_sym)
+          table.timestamp(key.to_sym)
         else
           if type.to_s.start_with? "varchar"
             if type.to_s.include? "(" and type.to_s.include? ")"
