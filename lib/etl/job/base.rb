@@ -12,7 +12,7 @@ module ETL::Job
     def initialize(b)
       @batch = b
       @notifier = ::ETL::Slack::Notifier.create_instance(id)
-      @notifier.add_text_to_attachments("Batch: #{@batch}") if @notifier
+      @notifier.add_text_to_attachments("Batch: #{@batch.to_h}") if @notifier
     end
     
     # Registers a job class with the manager. This is typically called by
