@@ -7,8 +7,11 @@ module ETL::Queue
   # Class that handles queueing using sqs for RabbitMQ
   class SQS < Base
     def initialize(params = {})
-      if params.empty?
-        params = ::ETL.config.sqs
+      if !params.key?(:url)
+        sqs_params = ::ETL.config.sqs
+        sqs_params.each_pair do |k, v|
+          params[k] = v
+        end
       end
 
       idle_timeout = params.fetch(:idle_timeout, nil)
