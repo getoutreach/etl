@@ -28,6 +28,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'pg'
   spec.add_dependency 'aws-sdk', ['>= 2.0', '< 3.0']
   spec.add_dependency 'slack-notifier'
+  spec.add_dependency 'newrelic_rpm'
 
   spec.add_development_dependency 'bunny'
   spec.add_development_dependency 'factory_girl'

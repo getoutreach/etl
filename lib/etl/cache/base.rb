@@ -36,8 +36,8 @@ module ETL::Cache
     end
 
     def find_rows(row)
-        key = self.class.hash_column_values(@columns, row, @rows_symbolized)
-        @row_lookup[key]
+      key = self.class.hash_column_values(@columns, row, @rows_symbolized)
+      @row_lookup[key]
     end
   end
 end
