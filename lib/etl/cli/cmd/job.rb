@@ -24,7 +24,6 @@ module ETL::Cli::Cmd
         # Dependencies_jobs sorted by the order to be executed
         if !d_jobs.empty?
           output =" *** #{d_jobs.join(' ')}"
-          puts(output)
           notifier.add_text_to_attachments(output) unless notifier.nil?
         end
 
@@ -33,7 +32,6 @@ module ETL::Cli::Cmd
           id =~ regex
         end.each do |id, klass|
           output = " * #{id} (#{klass.name.to_s})"
-          puts(output) unless d_jobs.include? id
           notifier.add_text_to_attachments(output) unless notifier.nil?
         end
         notifier.notify("List ETL Jobs") unless notifier.nil?
