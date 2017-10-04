@@ -1,4 +1,5 @@
 require_relative '../slack/notifier'
+require 'socket'
 
 module ETL::Job
   # Class that runs jobs given a payload
@@ -33,7 +34,11 @@ module ETL::Job
       # change status to running
       jr.running()
       notifier = job.notifier
-      notifier.notify("Starts running") unless notifier.nil?
+      unless notifier.nil?
+        host_name = Socket.gethostname
+        notifier.notify("Starts running on #{host_name}") 
+      end
+
       begin
         result = job.run()
         jr.success(result)
