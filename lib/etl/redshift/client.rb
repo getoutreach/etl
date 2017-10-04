@@ -5,6 +5,7 @@ require 'sequel'
 require 'odbc'
 require 'mixins/cached_logger'
 require 'pathname'
+require 'fileutils'
 
 module ETL::Redshift
   # when the odbc driver is setup in chef this is the driver's name
@@ -13,7 +14,7 @@ module ETL::Redshift
   # Class that contains shared logic for accessing Redshift.
   class Client
     include ETL::CachedLogger
-    attr_accessor :db, :region, :iam_role, :bucket, :delimiter, :row_columns_symbolized, :cache_table_schema_lookup
+    attr_accessor :db, :region, :iam_role, :bucket, :delimiter, :row_columns_symbolized, :cache_table_schema_lookup, :tmp_dir
 
     # when odbc driver is fully working the use redshift driver can
     # default to true
@@ -33,6 +34,7 @@ module ETL::Redshift
       @row_columns_symbolized = true
       @cache_table_schema_lookup = true
       @cached_table_schemas = {}
+      @tmp_dir = conn_params.fetch(:tmp_dir, '/tmp')
     end
 
     def disconnect
@@ -180,6 +182,17 @@ SQL
       keys.each { |key| s3.delete_object(bucket: bucket, key: key) }
     end
 
+    def temp_file(table_name)
+      # creating a daily file path so if the disk gets full its
+      # easy to kiil all the days except the current.
+      date_path = DateTime.now.strftime("%Y_%m_%d")
+      dir_path = "#{@tmp_dir}/redshift/#{date_path}"
+      FileUtils.makedirs(dir_path) unless Dir.exists?(dir_path)
+      temp_file = "#{dir_path}/#{table_name}_#{SecureRandom.hex(5)}"
+      FileUtils.touch(temp_file)
+      temp_file
+    end
+
     # Upserts rows into the destintation tables based on rows
     # provided by the reader.
     def upsert_rows(reader, table_schemas_lookup, row_transformer)
@@ -194,7 +207,7 @@ SQL
       csv_file_paths = {}
 
       table_schemas_lookup.keys.each do |t|
-        csv_file_paths[t] = Tempfile.new(t)
+        csv_file_paths[t] = temp_file(t)
         csv_files[t] = ::CSV.open(csv_file_paths[t], 'w', col_sep: @delimiter)
       end
 
@@ -216,7 +229,7 @@ SQL
       ensure
         table_schemas_lookup.each_pair do |t, table_schema|
           csv_files[t].close
-          local_file_path = csv_file_paths[t].path
+          local_file_path = csv_file_paths[t]
           s3_file_name = File.basename(local_file_path)
           s3_path = "#{@bucket}/#{s3_file_name}"
           tmp_table = create_staging_table(t)

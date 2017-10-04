@@ -7,6 +7,41 @@ require 'etl/redshift/table'
 module ETL::Cli::Cmd
   class Migration < ETL::Cli::Command
 
+    class Initialize < ETL::Cli::Command
+      option "--table", "TABLE", "table name", :required => true
+      option "--adpater", "Adapter", attribute_name: :host
+      option "--host", "Host", attribute_name: :host
+      option "--port", "Port", attribute_name: :port
+      option "--user", "User", attribute_name: :user
+      option "--password", "Password", attribute_name: :password
+      option "--database", "Database", attribute_name: :database
+      option "--outputfile", "Output file to create initial mappings", :attribute_name => :outputfile
+
+      def execute
+        @host = "127.0.0.1" if @host.nil?
+        @port = 3306 if @port.nil?
+        @adapter = "mysql2" if @adapter.nil?
+        @user = "root" if @user.nil?
+        @outputfile = "#{@table}.yml" if @outputfile.nil?
+        conn_params = { host: @host, adapter: @adapter, database: @database, user: @user, password: @password, port: @port}
+
+        db  = ::Sequel.connect(conn_params)
+        schema = db.schema(@table)
+        File.open(@outputfile, 'w') do |file|
+          file.write("#{@table}:\n")
+          file.write("  source_db_params:\n")
+          file.write("    host: #{@host}\n")
+          file.write("    port: #{@port}\n")
+          file.write("    adapter: mysql2\n")
+          file.write("    database: #{@database}\n")
+          file.write("    user: #{@user}\n")
+          file.write("    password: #{@password}\n")
+          file.write("  columns:\n")
+          schema.select { |column, types| file.write("   \"#{column}\": \"#{column}\"\n") }
+        end
+      end
+    end
+
     class Create < ETL::Cli::Command
 
       option "--table", "TABLE", "table name", :required => true
@@ -228,6 +263,7 @@ END
       end
     end
 
+    subcommand 'initialize', 'Creates a basic column mapping file from the source columns', Migration::Initialize
     subcommand 'create', 'Create migration', Migration::Create
   end
 end

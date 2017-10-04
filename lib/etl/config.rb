@@ -67,6 +67,7 @@ module ETL
       redshift_hash[:password] = ENV.fetch("#{prefix}_PASSWORD")
       redshift_hash[:driver] = ENV.fetch("#{prefix}_DRIVER", 'Amazon Redshift (x64)')
       redshift_hash[:server] = ENV.fetch("#{prefix}_HOST")
+      redshift_hash[:tmp_dir] = ENV.fetch("#{prefix}_TMP_DIR", '/tmp')
       redshift_hash
     end
 

@@ -24,7 +24,7 @@ module ETL::Output
     end
 
     def csv_file
-      @csv_file ||= Tempfile.new(dest_table)
+      @csv_file ||= @client.temp_file(dest_table)
     end
 
     def exec_query(sql)
@@ -107,7 +107,7 @@ SQL
 
     def upload_to_s3
       s3_resource = Aws::S3::Resource.new(region: @aws_params[:region])
-      s3_resource.bucket(@bucket).object(tmp_table).upload_file(csv_file.path)
+      s3_resource.bucket(@bucket).object(tmp_table).upload_file(csv_file)
     end
 
     def delete_object_from_s3
@@ -221,7 +221,7 @@ SQL
       @client.create_table(schema) if @create_table
       # Load data into temp csv
       # If the table exists, use the order of columns. Otherwise, use @header
-      ::CSV.open(csv_file.path, "w", {:col_sep => @delimiter} ) do |c|
+      ::CSV.open(csv_file, "w", {:col_sep => @delimiter} ) do |c|
         reader.each_row do |erow|
           # Remove line break from all columns so that Redshift can detect delimiter
           # Need this method since ESCAPE option with COPY command on Redshift does not work
@@ -252,7 +252,7 @@ SQL
         delete_object_from_s3
 
         # delete local file
-        ::File.delete(csv_file.path)
+        ::File.delete(csv_file)
       end
 
       @client.disconnect
