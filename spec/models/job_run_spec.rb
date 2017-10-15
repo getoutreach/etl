@@ -31,7 +31,7 @@ RSpec.describe "models/job_run_repository" do
 
   let(:batch) { ETL::Batch.new({ day: "2015-03-31" }) }
   let(:job) { JobRunSpecJob.new(batch) }
-  let(:jrr) { ETL::Model::JobRunRepository.new(nil, "public", 2000) }
+  let(:jrr) { ETL::Model::JobRunRepository.new(nil, "public") }
   let(:tfmt) { "%F %T" }
   let(:base_time) { Time.utc(2015, 3, 31, 8, 12, 34) }
 

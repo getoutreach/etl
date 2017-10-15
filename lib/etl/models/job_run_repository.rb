@@ -10,20 +10,13 @@ module ETL::Model
     attr_accessor :schema_name
     # allows configuration of another Repository
     class << self; attr_accessor :instance end
-    @@instance = ETL::Model::JobRunRepository.new
+    @@instance = ETL::Model::JobRunRepository
 
-    def initialize(conn_params = nil, schema_name= 'public', pending_job_expiration_days = 2)
+    def initialize(conn_params = nil, schema_name= 'public')
       @conn_params = conn_params
       @schema_name = schema_name
       @conn_params = ETL.config.core[:database] if @conn_params.nil?
       @conn_params = prep_conn(@conn_params)
-
-      # In the case where a job was stopped prior to 
-      # writing to the database that it was stopped this can introduce 
-      # and issue where pending jobs return true even though it is not
-      # Adding a flag to screen out jobs running longer than 2 days by default
-      # this can be overriden.
-      @pending_job_expiration_days = pending_job_expiration_days
     end
 
     def prep_conn(conn_params)
@@ -153,15 +146,13 @@ module ETL::Model
     # Finds all "pending" runs for specified job and batch
     # Pending means the job is either queued or currently running
     def find_pending(job, batch)
-      created_at = Date.today - @pending_job_expiration_days
-      sql = "Select * from #{@schema_name}.job_runs where job_id = '#{job.id}' and created_at > '#{created_at.iso8601}' and batch = '#{batch.to_json}' and (status = 'queued' or status = 'running' );"
+      sql = "Select * from #{@schema_name}.job_runs where job_id = '#{job.id}' and batch = '#{batch.to_json}' and (status = 'queued' or status = 'running' );"
       job_run_query(sql)
     end
 
     # Returns true if this job+batch has pending jobs
     def has_pending?(job, batch)
-      created_at = Date.today - @pending_job_expiration_days
-      sql = "Select count(*) from #{@schema_name}.job_runs where job_id = '#{job.id}' and created_at > '#{created_at.iso8601}' and batch = '#{batch.to_json}' and ( status = 'queued' or status = 'running' );"
+      sql = "Select count(*) from #{@schema_name}.job_runs where job_id = '#{job.id}' and batch = '#{batch.to_json}' and ( status = 'queued' or status = 'running' );"
       log.debug("SQL: '#{sql}'")
       r = conn.exec(sql)
       count = r.first["count"].to_i
