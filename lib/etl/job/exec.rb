@@ -19,27 +19,27 @@ module ETL::Job
     # produced. If the job has an exception this will (a) store that in the
     # job messages; (b) log it; (c) swallow it.
     def run
-      retries = 0
-      retry_wait = @params[:retry_wait]
-
-      # Collect metrics
-      measurements = {}
-      # get batch and job model out of the payload
-      batch, job = extract_payload
-      # get a run for this job
-
-      jrr = ::ETL::Model::JobRunRepository.instance
-      jr = jrr.create_for_job(job, batch)
-
-      # change status to running
-      jr.running()
-      notifier = job.notifier
-      unless notifier.nil?
-        host_name = Socket.gethostname
-        notifier.notify("Starts running on #{host_name}")
-      end
-
       begin
+        retries = 0
+        retry_wait = @params[:retry_wait]
+
+        # Collect metrics
+        measurements = {}
+        # get batch and job model out of the payload
+        batch, job = extract_payload
+        # get a run for this job
+
+        jrr = ::ETL::Model::JobRunRepository.instance
+        jr = jrr.create_for_job(job, batch)
+
+        # change status to running
+        jr.running()
+        notifier = job.notifier
+        unless notifier.nil?
+          host_name = Socket.gethostname
+          notifier.notify("Starts running on #{host_name}")
+        end
+
         result = job.run()
         jr.success(result)
         if !notifier.nil?
