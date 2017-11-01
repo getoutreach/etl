@@ -33,6 +33,15 @@ RSpec.describe 'Redshift Table' do
         expect(t.create_table_code).to eq("table = ::ETL::Redshift::Table.new('test_table')\ntable.add_column('id', 'int', nil, nil)\ntable.schema = 'public'\ntable.primary_key = ['id']\ntable.dist_key = 'id'\ntable.sort_key = [k]\n")
       end
 
+      it 'Create a table sql with DIST_STYLE and sort key' do
+        t = ETL::Redshift::Table.new(:test_table, dist_style: 'ALL')
+        t.int(:id)
+        t.add_primarykey(:id)
+        t.add_sortkey(:id)
+        expect(t.create_table_sql).to eq('CREATE TABLE IF NOT EXISTS public.test_table( "id" int NOT NULL, PRIMARY KEY(id) ) DISTSTYLE ALL SORTKEY(id)')
+        expect(t.create_table_code).to eq("table = ::ETL::Redshift::Table.new('test_table')\ntable.add_column('id', 'int', nil, nil)\ntable.schema = 'public'\ntable.primary_key = ['id']\ntable.sort_key = [k]\ntable.dist_style = 'ALL'\n")
+      end
+
       it 'Create a table sql with a non-nullable value' do
         t = ETL::Redshift::Table.new(:test_table)
         t.int(:id)
