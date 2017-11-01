@@ -168,7 +168,7 @@ module ETL
         # backup is by default on if not specified
         sql << ' BACKUP NO' unless @backup
 
-        sql << " DISTSTYLE #{dist_style}" unless @dist_style.empty?
+        sql << " DISTSTYLE #{@dist_style}" unless @dist_style.empty?
         
         sql << " DISTKEY(#{@dist_key})" unless @dist_key.empty?
 
