@@ -20,7 +20,7 @@ module ETL::Job
     # job messages; (b) log it; (c) swallow it.
     def run
       begin
-        retries = 0
+        retries ||= 0
         retry_wait = @params[:retry_wait]
 
         # Collect metrics
