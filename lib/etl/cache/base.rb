@@ -6,7 +6,7 @@ module ETL::Cache
   class Base
     def self.hash_column_values(columns, row, symbolized)
       # Avoid hash computation of there is one key
-      if columns.count > 1
+      if columns.count == 1
         return row[columns[0].to_sym] if symbolized
         return row[columns[0]]
       end
