@@ -36,7 +36,7 @@ RSpec.describe "cache" do
       ]
       cache = ::ETL::Cache::Base.new(["id", "bento"], true)
       cache.fill(data)
-      expect(cache.find_rows({:id => "1", :bento => "b1"})).to eq([{:id=>"1", :bento=>"b1", :info=>"foo"}, {:id=>"1", :bento =>"b2", :info =>"foo1"}])
+      expect(cache.find_rows({:id => "1", :bento => "b1"})).to eq([{:id=>"1", :bento=>"b1", :info=>"foo"}])
       expect(cache.find_rows({:id => "2", :bento => "b2"})).to eq([{:id=>"2", :bento=>"b2", :info=>"other"}])
       expect(cache.find_rows({:id => "3", :bento => "b3"})).to eq(nil)
   end
@@ -49,7 +49,7 @@ RSpec.describe "cache" do
       ]
       cache = ::ETL::Cache::Base.new(["id", "bento"], false)
       cache.fill(data)
-      expect(cache.find_rows({"id" => "1", "bento" => "b1"})).to eq([{"id"=>"1", "bento"=>"b1", "info"=>"foo"}, {"id"=>"1", "bento"=>"b2", "info"=>"foo1"}])
+      expect(cache.find_rows({"id" => "1", "bento" => "b1"})).to eq([{"id"=>"1", "bento"=>"b1", "info"=>"foo"}])
       expect(cache.find_rows({"id" => "2", "bento" => "b2"})).to eq([{"id"=>"2", "bento"=>"b2", "info"=>"other"}])
       expect(cache.find_rows({"id" => "3", "bento" => "b3"})).to eq(nil)
   end
