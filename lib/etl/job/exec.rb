@@ -60,6 +60,9 @@ module ETL::Job
         # But there are some that we know are fatal
         do_retry = false if ex.message.include?("Mysql2::Error: Unknown database")
 
+        # We dont want to retry when load error happens in loading data from s3 to redshift 
+        do_retry = false if ex.message.include?("ODBC::Error: XX000 (30)") && ex.message.include?("[Amazon Redshift] (30)")
+
         # Help debug timeouts by logging the full exception
         if ex.message.include?("Mysql2::Error: Lock wait timeout exceeded")
           log.exception(ex, Logger::WARN)
