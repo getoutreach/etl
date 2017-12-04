@@ -6,7 +6,7 @@ module ETL::Job
   class RetryError < StandardError
     attr_accessor :inner_error
     def initialize(msg="A Retry error has occured", inner_error)
-      super
+      super(msg)
       @inner_error = inner_error
     end
   end
