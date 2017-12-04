@@ -58,7 +58,7 @@ module ETL::Redshift
       s3_file_name = filter_opts.fetch(:s3_filepath)
       query = "Select * FROM stl_load_errors"
       query = query + " where filename = '#{s3_file_name}'" unless s3_file_name.nil?
-      db.with { |conn| conn.fetch(query) }
+      db.with { |conn| conn.fetch(query).all }
     end
 
     def stl_load_error_details(query_id)
