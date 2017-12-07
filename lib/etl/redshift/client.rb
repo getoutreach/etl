@@ -18,9 +18,13 @@ module ETL::Redshift
     include ETL::CachedLogger
     attr_accessor :db, :region, :iam_role, :bucket, :delimiter, :row_columns_symbolized, :cache_table_schema_lookup, :tmp_dir, :stl_load_retries
 
+    class << self
+      attr_accessor :cached_client
+    end
+
     # when odbc driver is fully working the use redshift driver can
     # default to true
-    def initialize(conn_params = {}, aws_params = {})
+    def initialize(conn_params = {}, aws_params = {}, is_cache = true)
       @region = aws_params.fetch(:region)
       @bucket = aws_params.fetch(:s3_bucket)
       @iam_role = aws_params.fetch(:role_arn)
@@ -46,12 +50,34 @@ module ETL::Redshift
       s3_resource = Aws::S3::Resource.new(region: @region)
     end
 
-    def disconnect
-      db.disconnect
+    def disconnect(force = false)
+      unless is_cache
+        db.disconnect
+        return        
+      end
+
+      if force
+        db.disconnect
+        self.class.cached_client = nil
+      end
     end
 
+    # def db
+    #   @db ||= Sequel.odbc(@odbc_conn_params)
+    # end
+
     def db
-      @db ||= Sequel.odbc(@odbc_conn_params)
+      @db ||= if is_cache
+                cached_client
+              else
+                Sequel.odbc(@odbc_conn_params)
+              end
+    end
+
+    def cached_client
+      return self.class.cached_client unless self.class.cached_client.nil?
+      self.class.cached_client = Sequel.odbc(@odbc_conn_params)
+      self.class.cached_client 
     end
 
     def stl_load_errors(filter_opts)
