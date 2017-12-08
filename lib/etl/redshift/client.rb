@@ -38,8 +38,6 @@ module ETL::Redshift
       @cached_table_schemas = {}
       @tmp_dir = conn_params.fetch(:tmp_dir, '/tmp')
       @stl_load_retries = 10
-      @connection_size = ENV.fetch("CONNECTION_POOL_SIZE", 1).to_i
-      @connection_timeout = ENV.fetch("CONNECTION_POOL_TIMEOUT", 5).to_i
     end
 
     def s3_resource
