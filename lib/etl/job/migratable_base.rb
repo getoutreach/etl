@@ -80,7 +80,7 @@ module ETL::Job
           m.down
         end
         break if current_version == goal_version
-        current_version += move
+        current_version += move_direction
       end
       set_schema_version(target_version)
     end
