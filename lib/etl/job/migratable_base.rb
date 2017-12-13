@@ -65,7 +65,7 @@ module ETL::Job
       end
 
       # Raise error message if the target version migration doesnt exist
-      raise "Migration for version #{goal_version} does not exist in #{migration_dir}" unless goal_version_migration_file_exists?(goal_version)
+      raise "Migration for version #{goal_version} does not exist in #{migration_dir}" unless version_migration_file_exists?(goal_version)
 
       current_version = start_version
       while true
