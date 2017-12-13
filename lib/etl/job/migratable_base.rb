@@ -70,7 +70,8 @@ module ETL::Job
       current_version = start_version
       while true
         version = ETL::StringUtil.digit_str(current_version)
-        load version_migration_file_path(version)
+        file = version_migration_file_path(version)
+        load file
         clazz = "Migration::#{ETL::StringUtil::snake_to_camel(file)}".split('::').inject(Object) {|o,c| o.const_get c}
         m = clazz.new(client)
         if move_direction == 1
