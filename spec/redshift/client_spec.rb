@@ -298,7 +298,7 @@ SQL
         ::File.delete(e.local_error_file)
       end
 
-      it '#copy_multiple_files_from_s3_with_retries' do
+      it '#copy_multiple_files_from_s3' do
         create_table(client)
 
         csv_file_path = "valid_csv_#{SecureRandom.hex(5)}"
@@ -314,7 +314,7 @@ SQL
         csv_file.add_row(CSV::Row.new(["id", "col2"], [9, '2']))
         csv_file.close
 
-        client.copy_multiple_files_from_s3_with_retries('test_s3_copy', csv_file_path, [])
+        client.copy_multiple_files_from_s3('test_s3_copy', csv_file_path, [])
 
         result = client.fetch("select count(*) from test_s3_copy").all
         expect(result[0][:count]).to eq(9)

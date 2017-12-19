@@ -289,7 +289,7 @@ SQL
           csv_files[t].close
           local_file_path = csv_file_paths[t]
           tmp_table = create_staging_table(tschema.schema, t)
-          copy_multiple_files_from_s3_with_retries(tmp_table, local_file_path, copy_options)
+          copy_multiple_files_from_s3(tmp_table, local_file_path, copy_options)
 
           full_table = "#{tschema.schema}.#{t}"
           where_id_join = ''
@@ -383,7 +383,7 @@ SQL
       [error_file_path, s3_errors_file_path]
     end
 
-    def copy_multiple_files_from_s3_with_retries(tmp_table, local_file_path, options)
+    def copy_multiple_files_from_s3(tmp_table, local_file_path, options)
       error = false 
       s3_errors_file_path = nil
       stl_load_error_found = false
