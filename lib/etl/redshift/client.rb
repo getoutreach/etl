@@ -258,7 +258,6 @@ SQL
 
       csv_files = {}
       csv_file_paths = {}
-      file_uploaded = {}
       rows_processed_map = {}
       table_schemas_lookup.keys.each do |t|
         csv_file_paths[t] = temp_file(t)
@@ -305,9 +304,6 @@ SQL
           validator.validate(t, tmp_table, tschema) if validator
           add_sql = add_new_data.build_sql(tmp_table, full_table, where_id_join: where_id_join)
           execute(add_sql)
-          if file_uploaded[t]
-            s3_resource.bucket(@bucket).object(s3_file_name).delete
-          end
         end
       end
       highest_num_rows_processed = 0
