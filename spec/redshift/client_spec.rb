@@ -314,6 +314,8 @@ SQL
         csv_file.add_row(CSV::Row.new(["id", "col2"], [9, '2']))
         csv_file.close
 
+        client.copy_multiple_files_from_s3_with_retries('test_s3_copy', csv_file_path, [])
+
         result = client.fetch("select count(*) from test_s3_copy").all
         expect(result[0][:count]).to eq(9)
       end
