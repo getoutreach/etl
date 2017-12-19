@@ -38,7 +38,7 @@ module ETL::Redshift
       @cached_table_schemas = {}
       @tmp_dir = conn_params.fetch(:tmp_dir, '/tmp')
       @stl_load_retries = 10
-      @slices_s3_files = ENV.fetch('OUTREACH_S3_SLICES', "5").to_i
+      @slices_s3_files = ENV.fetch('ETL_REDSHIFT_SLICES', "5").to_i
     end
 
     def s3_resource
@@ -388,63 +388,31 @@ SQL
     end
 
     def copy_multiple_files_from_s3_with_retries(tmp_table, local_file_path, options)
-      error_file_path = nil
+      error = false 
       s3_errors_file_path = nil
       stl_load_error_found = false
       retries = 0
       current_local_file = local_file_path
       files = [local_file_path]
       s3_files = []
-      begin
-        loop do
-          stl_load_error_found = false
-          begin
-            s3_prefix, s3_multiple_files = upload_multiple_files_to_s3(current_local_file)
-            s3_files += s3_multiple_files
-            copy_from_s3(tmp_table, s3_prefix, options)
-            break
-          rescue RedshiftSTLLoadError => e
-            stl_load_error_found = true
-            next_local_file = "#{local_file_path}_#{retries}"
-            files << next_local_file
-            found_error_row = self.class.remove_line_at(e.error_row[:line_number], current_local_file, next_local_file)
-            ::File.delete(current_local_file)
-            remove_chunked_files(current_local_file)
-            current_local_file = next_local_file
 
-            # re-upload with removed line
-            paths = build_error_file(tmp_table) if error_file_path.nil?
-            error_file_path = paths[0] if error_file_path.nil?
-            s3_errors_file_path = paths[1] if s3_errors_file_path.nil?
-            open(error_file_path, 'a') do |f|
-              f << found_error_row
-            end
-            if retries >= @stl_load_retries
-              e.local_error_file = error_file_path unless error_file_path.nil?
-              e.error_s3_file = s3_errors_file_path unless s3_errors_file_path.nil?
-              raise e
-            end
-          ensure
-            retries += 1
-          end
-        end
+      begin
+        s3_prefix, s3_multiple_files = upload_multiple_files_to_s3(current_local_file)
+        s3_files += s3_multiple_files
+        copy_from_s3(tmp_table, s3_prefix, options)
+      rescue => e
+        error = true
       ensure
         ::File.delete(current_local_file)
         # To-do: remove all local files
         remove_chunked_files(current_local_file)
 
         # delete if no error
-        s3_files.each { |f| s3_resource.bucket(@bucket).object(f).delete } if error_file_path.nil?
-        unless error_file_path.nil?
-          s3_resource.bucket(@bucket).object(s3_errors_file_path).upload_file(error_file_path)
-          log.warning("There were errors uploading data, the following file in s3 contains the failed rows: #{s3_errors_file_path}")
-        end
+        s3_files.each { |f| s3_resource.bucket(@bucket).object(f).delete } unless error
       end
-
-      [error_file_path, s3_errors_file_path]
     end
 
-    def upload_multiple_files_to_s3(current_local_file_path)
+    def upload_multiple_files_to_s3(current_local_file_path, thread_count = 5)
       file_number = 0
       mutex       = Mutex.new
       threads     = []
@@ -453,7 +421,7 @@ SQL
       s3_files = []
       s3_path = ""
 
-      @slices_s3_files.times do |i|
+      thread_count.times do |i|
         threads[i] = Thread.new do
           until files.empty?
             mutex.synchronize do
