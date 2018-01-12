@@ -39,38 +39,48 @@ module ETL::Job
       end
     end
 
+    def version_migration_file_exists?(goal_version)
+      file_path = version_migration_file_path(goal_version)
+      migration_files.include? file_path
+    end
+
+    def version_migration_file_path(goal_version)
+      "#{migration_dir}/#{id}_#{ETL::StringUtil.digit_str(goal_version)}.rb"
+    end
+
     def migrate(client)
       # execute migration
       return if deploy_version == target_version
+      move_direction = 0
       # To-do: execute 'down' when the target version is smaller than deploy version
       # To-do: execute 'up' when the target version is greater than deploy version
       if deploy_version < target_version
         start_version = deploy_version + 1
         goal_version = target_version
-        move = 1
+        move_dirction = 1
       else
         start_version = deploy_version
         goal_version = target_version + 1
-        move = -1
+        move_direction = -1
       end
 
       # Raise error message if the target version migration doesnt exist
-      raise "Migration for version #{goal_version} does not exist in #{migration_dir}" unless migration_files.include? "#{migration_dir}/#{id}_#{ETL::StringUtil.digit_str(goal_version)}.rb"
+      raise "Migration for version #{goal_version} does not exist in #{migration_dir}" unless version_migration_file_exists?(goal_version)
 
       current_version = start_version
       while true
         version = ETL::StringUtil.digit_str(current_version)
-        file = "#{id}_#{version}"
-        load "#{migration_dir}/#{file}.rb"
+        file = version_migration_file_path(version)
+        load file
         clazz = "Migration::#{ETL::StringUtil::snake_to_camel(file)}".split('::').inject(Object) {|o,c| o.const_get c}
         m = clazz.new(client)
-        if move == 1
+        if move_direction == 1
           m.up
         else
           m.down
         end
         break if current_version == goal_version
-        current_version += move
+        current_version += move_direction
       end
       set_schema_version(target_version)
     end
