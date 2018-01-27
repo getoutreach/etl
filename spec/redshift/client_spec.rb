@@ -2,27 +2,123 @@ require 'etl/redshift/client'
 require 'etl/redshift/table'
 require 'etl/core'
 
-def create_test_file(filename = "client_test_file", rows = 20)
+def create_test_file(filename = "client_test_file", rows = 20, duplicate_rows_col1 = 0, duplicate_rows_col2 = 0, delimiter = "|")
   File.open(filename, "w+") do |f|
     rows.times do |i|
-      f.write("abc|def|ghi#{i}\n")
+      f.write("abc#{i}#{delimiter}def#{i}#{delimiter}ghi#{i}#{delimiter}#{i}\n")
+    end
+    duplicate_rows_col1.times do |i|
+      f.write("abcd#{delimiter}efg#{i}#{delimiter}hij#{i}#{delimiter}#{i + duplicate_rows_col1}\n")
+    end
+    duplicate_rows_col2.times do |i|
+      f.write("abcd#{delimiter}efgh#{delimiter}ijk#{i}#{delimiter}#{i + duplicate_rows_col1 + duplicate_rows_col2}\n")
     end
   end
+end
+
+def create_test_data(rows = 20, duplicate_rows_col1 = 0, duplicate_rows_col2 = 0, duplicate_rows_col3 = 0)
+  data = []
+  rows.times do |i|
+    data << { col1: "abc#{i}",
+              col2: "def#{i}",
+              col3: "ghi#{i}",
+              created_at: i }
+  end
+  duplicate_rows_col1.times do |i|
+    data << { col1: "abcd",
+              col2: "efg#{i}",
+              col3: "hij#{i}",
+              created_at: i + duplicate_rows_col1 }
+  end
+  duplicate_rows_col2.times do |i|
+    data << { col1: "abc#{i}",
+              col2: "defg",
+              col3: "hij#{i}",
+              created_at: i + duplicate_rows_col1 + duplicate_rows_col2 }
+  end
+  duplicate_rows_col3.times do |i|
+    data << { col1: "abc#{i}",
+              col2: "def#{i}",
+              col3: "ghij",
+              created_at: i + duplicate_rows_col1 + duplicate_rows_col2 + duplicate_rows_col3 }
+  end
+  data
+end
+
+def create_test_data_with_updated_at(rows = 20, duplicate_rows_col1 = 0, duplicate_rows_col2 = 0, duplicate_rows_col3 = 0)
+  data = []
+  rows.times do |i|
+    data << { col1: "abc#{i}",
+              col2: "def#{i}",
+              col3: "ghi#{i}",
+              created_at: i,
+              updated_at: 2 * (duplicate_rows_col1 + duplicate_rows_col2 + duplicate_rows_col3) + 40 }
+  end
+  duplicate_rows_col1.times do |i|
+    data << { col1: "abcd",
+              col2: "efg#{i}",
+              col3: "hij#{i}",
+              created_at: i + duplicate_rows_col1,
+              updated_at: 2 * (duplicate_rows_col1 + duplicate_rows_col2 + duplicate_rows_col3) + 30 }
+  end
+  duplicate_rows_col2.times do |i|
+    data << { col1: "abc#{i}",
+              col2: "defg",
+              col3: "hij#{i}",
+              created_at: i + duplicate_rows_col1 + duplicate_rows_col2,
+              updated_at: 2 * (duplicate_rows_col1 + duplicate_rows_col2 + duplicate_rows_col3) + 20 }
+  end
+  duplicate_rows_col3.times do |i|
+    data << { col1: "abc#{i}",
+              col2: "def#{i}",
+              col3: "ghij",
+              created_at: i + duplicate_rows_col1 + duplicate_rows_col2 + duplicate_rows_col3,
+              updated_at: 2 * (duplicate_rows_col1 + duplicate_rows_col2 + duplicate_rows_col3) + 10 }
+  end
+  data
 end
 
 def delete_test_file(filename = "client_test_file")
   system( "rm #{filename} ")
 end
 
-def create_test_table(client)
- client.drop_table('public', 'client_test')
+def create_test_table(client, name = 'client_test', pkeys = nil, with_updated_at = false)
+ client.drop_table('public', name)
+ primary_keys = ''
+ unless pkeys.nil?
+   primary_keys = ", PRIMARY KEY(#{pkeys.join(', ')})"
+ end
  create_table = <<SQL
-    create table client_test (
+    create table #{name} (
       col1 varchar(8),
       col2 varchar(8),
-      col3 varchar(8) );
+      col3 varchar(8),
+      created_at INT
+      #{', updated_at INT' if with_updated_at}
+      #{primary_keys} );
 SQL
   client.execute(create_table)
+end
+
+def fill_test_table(client, name = 'client_test', with_updated_at = false)
+  sql = <<SQL
+  insert into #{name} values
+  ('zyx1', 'wvu1', 'tsr1', 0#{', 0' if with_updated_at}),
+  ('zyx2', 'wvu2', 'tsr2', 0#{', 0' if with_updated_at}),
+  ('zyx3', 'wvu3', 'tsr3', 0#{', 0' if with_updated_at}),
+  ('zyx4', 'wvu4', 'tsr4', 0#{', 0' if with_updated_at}),
+  ('zyx5', 'wvu5', 'tsr5', 0#{', 0' if with_updated_at}),
+  ('abc2', 'def1', 'ghi1', 0#{', 0' if with_updated_at})
+SQL
+  client.execute(sql)
+end
+
+def count_files_with_prefix(client, prefix)
+  i = 0
+  client.s3_resource.bucket(client.bucket).objects({prefix: prefix}).each do
+    i += 1
+  end
+  i
 end
 
 RSpec.describe 'redshift' do
@@ -348,7 +444,7 @@ SQL
       client2 = ETL::Redshift::Client.new(ETL.config.redshift[:test], ETL.config.aws[:test])
       create_test_table(client2)
       client2.delimiter = '|'
-      client2.s3_resource.bucket(client2.bucket).objects({prefix: "client_test_file/"}).batch_delete!
+      client2.s3_resource.bucket(client2.bucket).objects({prefix: "client_test_file"}).batch_delete!
       expect(client2.s3_resource.bucket(client2.bucket).object('client_test_file/client_test_file_1.csv').exists?).to eq(false)
       client2.upload_multiple_files_to_s3("client_test_file")
       expect(client2.s3_resource.bucket(client2.bucket).object('client_test_file/client_test_file_1.csv').exists?).to eq(true)
@@ -365,7 +461,7 @@ SQL
     it 'removes folder if it already exists' do
       client2 = ETL::Redshift::Client.new(ETL.config.redshift[:test], ETL.config.aws[:test])
       # make sure the destination folder doesn't exist
-      client2.s3_resource.bucket(client2.bucket).objects({prefix: "client_test_file/"}).batch_delete!
+      client2.s3_resource.bucket(client2.bucket).objects({prefix: "client_test_file"}).batch_delete!
 
       # upload a file with 20 rows
       # this gets chunked into 5 files with 4 rows each
@@ -383,14 +479,245 @@ SQL
       client2.delimiter = '|'
       client2.copy_from_s3('client_test', "ss-uw1-stg.redshift-testing/client_test_file/client_test_file")
       client2.remove_chunked_files("client_test_file")
+
       # clear out the temp files from s3
+      expect(count_files_with_prefix(client2, "client_test_file")).to be > 0
       expect(client2.s3_resource.bucket(client2.bucket).object('client_test_file/client_test_file_1.csv').exists?).to eq(true)
       client2.s3_resource.bucket(client2.bucket).objects({prefix: "client_test_file/"}).batch_delete!
+      expect(count_files_with_prefix(client2, "client_test_file")).to eq(0)
       expect(client2.s3_resource.bucket(client2.bucket).object('client_test_file/client_test_file_1.csv').exists?).to eq(false)
 
       # verify we only got 10 rows
       result = client2.fetch("select count(*) from client_test").all
       expect(result[0][:count]).to eq(10)
+    end
+
+    it 'de-duplicates on merge with single column primary key, no updated_at' do
+      client2 = ETL::Redshift::Client.new(ETL.config.redshift[:test], ETL.config.aws[:test])
+
+      client2.s3_resource.bucket(client2.bucket).objects({prefix: "client_test_"}).batch_delete!
+
+      data = create_test_data(10, 10, 10, 10)
+
+      input = ETL::Input::Array.new(data)
+      create_test_table(client2, 'client_test', ['col1'])
+      table_schema = client2.table_schema('public', 'client_test')
+      table_schemas_lookup = { 'client_test' => table_schema }
+      fill_test_table(client2, 'client_test')
+
+      client2.upsert_rows(input, table_schemas_lookup, nil, nil, [])
+
+      # verify we didn't leave any files behind
+      expect(count_files_with_prefix(client2, "client_test_")).to eq(0)
+
+      # verify we only got 11 rows
+      result = client2.fetch("select count(*) from client_test").all
+      expect(result[0][:count]).to eq(16)
+
+      # verify data
+      result = client2.fetch("select * from client_test order by col1 asc, col2 asc, col3 asc").all
+
+      expect(result).to eq(
+        [
+          { :col1=>"abc0", :col2=>"def0", :col3=>"ghij", :created_at=>30 },
+          { :col1=>"abc1", :col2=>"def1", :col3=>"ghij", :created_at=>31 },
+          { :col1=>"abc2", :col2=>"def2", :col3=>"ghij", :created_at=>32 },
+          { :col1=>"abc3", :col2=>"def3", :col3=>"ghij", :created_at=>33 },
+          { :col1=>"abc4", :col2=>"def4", :col3=>"ghij", :created_at=>34 },
+          { :col1=>"abc5", :col2=>"def5", :col3=>"ghij", :created_at=>35 },
+          { :col1=>"abc6", :col2=>"def6", :col3=>"ghij", :created_at=>36 },
+          { :col1=>"abc7", :col2=>"def7", :col3=>"ghij", :created_at=>37 },
+          { :col1=>"abc8", :col2=>"def8", :col3=>"ghij", :created_at=>38 },
+          { :col1=>"abc9", :col2=>"def9", :col3=>"ghij", :created_at=>39 },
+          { :col1=>"abcd", :col2=>"efg9", :col3=>"hij9", :created_at=>19 },
+          { :col1=>"zyx1", :col2=>"wvu1", :col3=>"tsr1", :created_at=>0 },
+          { :col1=>"zyx2", :col2=>"wvu2", :col3=>"tsr2", :created_at=>0 },
+          { :col1=>"zyx3", :col2=>"wvu3", :col3=>"tsr3", :created_at=>0 },
+          { :col1=>"zyx4", :col2=>"wvu4", :col3=>"tsr4", :created_at=>0 },
+          { :col1=>"zyx5", :col2=>"wvu5", :col3=>"tsr5", :created_at=>0 }
+        ]
+      )
+    end
+
+    it 'de-duplicates on merge with single column primary key, with updated_at' do
+      client2 = ETL::Redshift::Client.new(ETL.config.redshift[:test], ETL.config.aws[:test])
+
+      client2.s3_resource.bucket(client2.bucket).objects({prefix: "client_test_"}).batch_delete!
+
+      data = create_test_data_with_updated_at(10, 10, 10, 10)
+
+      input = ETL::Input::Array.new(data)
+      create_test_table(client2, 'client_test', ['col1'], true)
+      table_schema = client2.table_schema('public', 'client_test')
+      table_schemas_lookup = { 'client_test' => table_schema }
+      fill_test_table(client2, 'client_test', true)
+
+      client2.upsert_rows(input, table_schemas_lookup, nil, nil, [])
+
+      # verify we didn't leave any files behind
+      expect(count_files_with_prefix(client2, "client_test_")).to eq(0)
+
+      # verify we only got 11 rows
+      result = client2.fetch("select count(*) from client_test").all
+      expect(result[0][:count]).to eq(16)
+
+      # verify data
+      result = client2.fetch("select * from client_test order by col1 asc, col2 asc, col3 asc").all
+
+      expect(result).to eq(
+        [
+          {:col1=>"abc0", :col2=>"def0", :col3=>"ghi0", :created_at=>0, :updated_at=>100},
+          {:col1=>"abc1", :col2=>"def1", :col3=>"ghi1", :created_at=>1, :updated_at=>100},
+          {:col1=>"abc2", :col2=>"def2", :col3=>"ghi2", :created_at=>2, :updated_at=>100},
+          {:col1=>"abc3", :col2=>"def3", :col3=>"ghi3", :created_at=>3, :updated_at=>100},
+          {:col1=>"abc4", :col2=>"def4", :col3=>"ghi4", :created_at=>4, :updated_at=>100},
+          {:col1=>"abc5", :col2=>"def5", :col3=>"ghi5", :created_at=>5, :updated_at=>100},
+          {:col1=>"abc6", :col2=>"def6", :col3=>"ghi6", :created_at=>6, :updated_at=>100},
+          {:col1=>"abc7", :col2=>"def7", :col3=>"ghi7", :created_at=>7, :updated_at=>100},
+          {:col1=>"abc8", :col2=>"def8", :col3=>"ghi8", :created_at=>8, :updated_at=>100},
+          {:col1=>"abc9", :col2=>"def9", :col3=>"ghi9", :created_at=>9, :updated_at=>100},
+          {:col1=>"abcd", :col2=>"efg9", :col3=>"hij9", :created_at=>19, :updated_at=>90},
+          {:col1=>"zyx1", :col2=>"wvu1", :col3=>"tsr1", :created_at=>0, :updated_at=>0},
+          {:col1=>"zyx2", :col2=>"wvu2", :col3=>"tsr2", :created_at=>0, :updated_at=>0},
+          {:col1=>"zyx3", :col2=>"wvu3", :col3=>"tsr3", :created_at=>0, :updated_at=>0},
+          {:col1=>"zyx4", :col2=>"wvu4", :col3=>"tsr4", :created_at=>0, :updated_at=>0},
+          {:col1=>"zyx5", :col2=>"wvu5", :col3=>"tsr5", :created_at=>0, :updated_at=>0}
+        ]
+      )
+    end
+
+    it 'de-duplicates on merge with multi column primary key, no updated_at ' do
+      client2 = ETL::Redshift::Client.new(ETL.config.redshift[:test], ETL.config.aws[:test])
+
+      client2.s3_resource.bucket(client2.bucket).objects({prefix: "client_test_"}).batch_delete!
+
+      data = create_test_data(10, 10, 10, 10)
+
+      input = ETL::Input::Array.new(data)
+      create_test_table(client2, 'client_test', ['col1', 'col2'])
+      table_schema = client2.table_schema('public', 'client_test')
+      table_schemas_lookup = { 'client_test' => table_schema }
+      fill_test_table(client2, 'client_test')
+
+      client2.upsert_rows(input, table_schemas_lookup, nil, nil, [])
+
+      # verify we didn't leave any files behind
+      expect(count_files_with_prefix(client2, "client_test_")).to eq(0)
+
+      # verify we only got 11 rows
+      result = client2.fetch("select count(*) from client_test").all
+      expect(result[0][:count]).to eq(36)
+
+      # verify data
+      result = client2.fetch("select * from client_test order by col1 asc, col2 asc, col3 asc").all
+
+      expect(result).to eq(
+        [
+          { :col1=>"abc0", :col2=>"def0", :col3=>"ghij", :created_at=>30 },
+          { :col1=>"abc0", :col2=>"defg", :col3=>"hij0", :created_at=>20 },
+          { :col1=>"abc1", :col2=>"def1", :col3=>"ghij", :created_at=>31 },
+          { :col1=>"abc1", :col2=>"defg", :col3=>"hij1", :created_at=>21 },
+          { :col1=>"abc2", :col2=>"def1", :col3=>"ghi1", :created_at=>0 },
+          { :col1=>"abc2", :col2=>"def2", :col3=>"ghij", :created_at=>32 },
+          { :col1=>"abc2", :col2=>"defg", :col3=>"hij2", :created_at=>22 },
+          { :col1=>"abc3", :col2=>"def3", :col3=>"ghij", :created_at=>33 },
+          { :col1=>"abc3", :col2=>"defg", :col3=>"hij3", :created_at=>23 },
+          { :col1=>"abc4", :col2=>"def4", :col3=>"ghij", :created_at=>34 },
+          { :col1=>"abc4", :col2=>"defg", :col3=>"hij4", :created_at=>24 },
+          { :col1=>"abc5", :col2=>"def5", :col3=>"ghij", :created_at=>35 },
+          { :col1=>"abc5", :col2=>"defg", :col3=>"hij5", :created_at=>25 },
+          { :col1=>"abc6", :col2=>"def6", :col3=>"ghij", :created_at=>36 },
+          { :col1=>"abc6", :col2=>"defg", :col3=>"hij6", :created_at=>26 },
+          { :col1=>"abc7", :col2=>"def7", :col3=>"ghij", :created_at=>37 },
+          { :col1=>"abc7", :col2=>"defg", :col3=>"hij7", :created_at=>27 },
+          { :col1=>"abc8", :col2=>"def8", :col3=>"ghij", :created_at=>38 },
+          { :col1=>"abc8", :col2=>"defg", :col3=>"hij8", :created_at=>28 },
+          { :col1=>"abc9", :col2=>"def9", :col3=>"ghij", :created_at=>39 },
+          { :col1=>"abc9", :col2=>"defg", :col3=>"hij9", :created_at=>29 },
+          { :col1=>"abcd", :col2=>"efg0", :col3=>"hij0", :created_at=>10 },
+          { :col1=>"abcd", :col2=>"efg1", :col3=>"hij1", :created_at=>11 },
+          { :col1=>"abcd", :col2=>"efg2", :col3=>"hij2", :created_at=>12 },
+          { :col1=>"abcd", :col2=>"efg3", :col3=>"hij3", :created_at=>13 },
+          { :col1=>"abcd", :col2=>"efg4", :col3=>"hij4", :created_at=>14 },
+          { :col1=>"abcd", :col2=>"efg5", :col3=>"hij5", :created_at=>15 },
+          { :col1=>"abcd", :col2=>"efg6", :col3=>"hij6", :created_at=>16 },
+          { :col1=>"abcd", :col2=>"efg7", :col3=>"hij7", :created_at=>17 },
+          { :col1=>"abcd", :col2=>"efg8", :col3=>"hij8", :created_at=>18 },
+          { :col1=>"abcd", :col2=>"efg9", :col3=>"hij9", :created_at=>19 },
+          { :col1=>"zyx1", :col2=>"wvu1", :col3=>"tsr1", :created_at=>0 },
+          { :col1=>"zyx2", :col2=>"wvu2", :col3=>"tsr2", :created_at=>0 },
+          { :col1=>"zyx3", :col2=>"wvu3", :col3=>"tsr3", :created_at=>0 },
+          { :col1=>"zyx4", :col2=>"wvu4", :col3=>"tsr4", :created_at=>0 },
+          { :col1=>"zyx5", :col2=>"wvu5", :col3=>"tsr5", :created_at=>0 }
+        ]
+      )
+    end
+
+    it 'de-duplicates on merge with multi column primary key, with updated_at' do
+      client2 = ETL::Redshift::Client.new(ETL.config.redshift[:test], ETL.config.aws[:test])
+
+      client2.s3_resource.bucket(client2.bucket).objects({prefix: "client_test_"}).batch_delete!
+
+      data = create_test_data_with_updated_at(10, 10, 10, 10)
+
+      input = ETL::Input::Array.new(data)
+      create_test_table(client2, 'client_test', ['col1', 'col2'], true)
+      table_schema = client2.table_schema('public', 'client_test')
+      table_schemas_lookup = { 'client_test' => table_schema }
+      fill_test_table(client2, 'client_test', true)
+
+      client2.upsert_rows(input, table_schemas_lookup, nil, nil, [])
+
+      # verify we didn't leave any files behind
+      expect(count_files_with_prefix(client2, "client_test_")).to eq(0)
+
+      # verify we only got 11 rows
+      result = client2.fetch("select count(*) from client_test").all
+      expect(result[0][:count]).to eq(36)
+
+      # verify data
+      result = client2.fetch("select * from client_test order by col1 asc, col2 asc, col3 asc").all
+
+      expect(result).to eq(
+        [
+          {:col1=>"abc0", :col2=>"def0", :col3=>"ghi0", :created_at=>0, :updated_at=>100},
+          {:col1=>"abc0", :col2=>"defg", :col3=>"hij0", :created_at=>20, :updated_at=>80},
+          {:col1=>"abc1", :col2=>"def1", :col3=>"ghi1", :created_at=>1, :updated_at=>100},
+          {:col1=>"abc1", :col2=>"defg", :col3=>"hij1", :created_at=>21, :updated_at=>80},
+          {:col1=>"abc2", :col2=>"def1", :col3=>"ghi1", :created_at=>0, :updated_at=>0},
+          {:col1=>"abc2", :col2=>"def2", :col3=>"ghi2", :created_at=>2, :updated_at=>100},
+          {:col1=>"abc2", :col2=>"defg", :col3=>"hij2", :created_at=>22, :updated_at=>80},
+          {:col1=>"abc3", :col2=>"def3", :col3=>"ghi3", :created_at=>3, :updated_at=>100},
+          {:col1=>"abc3", :col2=>"defg", :col3=>"hij3", :created_at=>23, :updated_at=>80},
+          {:col1=>"abc4", :col2=>"def4", :col3=>"ghi4", :created_at=>4, :updated_at=>100},
+          {:col1=>"abc4", :col2=>"defg", :col3=>"hij4", :created_at=>24, :updated_at=>80},
+          {:col1=>"abc5", :col2=>"def5", :col3=>"ghi5", :created_at=>5, :updated_at=>100},
+          {:col1=>"abc5", :col2=>"defg", :col3=>"hij5", :created_at=>25, :updated_at=>80},
+          {:col1=>"abc6", :col2=>"def6", :col3=>"ghi6", :created_at=>6, :updated_at=>100},
+          {:col1=>"abc6", :col2=>"defg", :col3=>"hij6", :created_at=>26, :updated_at=>80},
+          {:col1=>"abc7", :col2=>"def7", :col3=>"ghi7", :created_at=>7, :updated_at=>100},
+          {:col1=>"abc7", :col2=>"defg", :col3=>"hij7", :created_at=>27, :updated_at=>80},
+          {:col1=>"abc8", :col2=>"def8", :col3=>"ghi8", :created_at=>8, :updated_at=>100},
+          {:col1=>"abc8", :col2=>"defg", :col3=>"hij8", :created_at=>28, :updated_at=>80},
+          {:col1=>"abc9", :col2=>"def9", :col3=>"ghi9", :created_at=>9, :updated_at=>100},
+          {:col1=>"abc9", :col2=>"defg", :col3=>"hij9", :created_at=>29, :updated_at=>80},
+          {:col1=>"abcd", :col2=>"efg0", :col3=>"hij0", :created_at=>10, :updated_at=>90},
+          {:col1=>"abcd", :col2=>"efg1", :col3=>"hij1", :created_at=>11, :updated_at=>90},
+          {:col1=>"abcd", :col2=>"efg2", :col3=>"hij2", :created_at=>12, :updated_at=>90},
+          {:col1=>"abcd", :col2=>"efg3", :col3=>"hij3", :created_at=>13, :updated_at=>90},
+          {:col1=>"abcd", :col2=>"efg4", :col3=>"hij4", :created_at=>14, :updated_at=>90},
+          {:col1=>"abcd", :col2=>"efg5", :col3=>"hij5", :created_at=>15, :updated_at=>90},
+          {:col1=>"abcd", :col2=>"efg6", :col3=>"hij6", :created_at=>16, :updated_at=>90},
+          {:col1=>"abcd", :col2=>"efg7", :col3=>"hij7", :created_at=>17, :updated_at=>90},
+          {:col1=>"abcd", :col2=>"efg8", :col3=>"hij8", :created_at=>18, :updated_at=>90},
+          {:col1=>"abcd", :col2=>"efg9", :col3=>"hij9", :created_at=>19, :updated_at=>90},
+          {:col1=>"zyx1", :col2=>"wvu1", :col3=>"tsr1", :created_at=>0, :updated_at=>0},
+          {:col1=>"zyx2", :col2=>"wvu2", :col3=>"tsr2", :created_at=>0, :updated_at=>0},
+          {:col1=>"zyx3", :col2=>"wvu3", :col3=>"tsr3", :created_at=>0, :updated_at=>0},
+          {:col1=>"zyx4", :col2=>"wvu4", :col3=>"tsr4", :created_at=>0, :updated_at=>0},
+          {:col1=>"zyx5", :col2=>"wvu5", :col3=>"tsr5", :created_at=>0, :updated_at=>0}
+        ]
+      )
     end
   end
 end

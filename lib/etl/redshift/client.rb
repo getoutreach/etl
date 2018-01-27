@@ -308,9 +308,13 @@ SQL
                               "#{where_id_join} and #{full_table}.#{pk} = #{tmp_table}.#{pk}"
                             end
           end
+          # partition by all primary key columns so we can detect any duplicate primary keys
+          partition_by = tschema.primary_key.join(', ')
+          columns = tschema.columns.keys.join(', ')
+          order_by = build_order_by(tschema)
 
           validator.validate(t, tmp_table, tschema) if validator
-          add_sql = add_new_data.build_sql(tmp_table, full_table, where_id_join: where_id_join)
+          add_sql = add_new_data.build_sql(tmp_table, full_table, where_id_join: where_id_join, columns: columns, partition_by: partition_by, order_by: order_by)
           execute(add_sql)
         end
       ensure
@@ -330,6 +334,14 @@ SQL
         highest_num_rows_processed = value if highest_num_rows_processed < value
       end
       highest_num_rows_processed
+    end
+
+    def build_order_by(tschema)
+      order_by_cols = []
+      order_by_cols << 'updated_at DESC' if tschema.columns.key?('updated_at') || tschema.columns.key?(:updated_at)
+      order_by_cols << 'created_at DESC' if tschema.columns.key?('created_at') || tschema.columns.key?(:created_at)
+      return '' if order_by_cols.empty?
+      "ORDER BY #{order_by_cols.join(', ')}"
     end
 
     def build_error_file(file_prefix)
@@ -585,10 +597,14 @@ SQL
 
     def build_sql(tmp_table, destination_table_name, opts)
       sql = ''
+      columns = opts.fetch(:columns)
+      partition_by = opts.fetch(:partition_by)
+      order_by = opts.fetch(:order_by)
       if @add_data_type == 'append'
         sql = <<SQL
 begin transaction;
-  insert into #{destination_table_name} select * from #{tmp_table};
+  insert into #{destination_table_name}
+    select #{columns} from (SELECT row_number() OVER (partition by #{partition_by} #{order_by}), * FROM #{tmp_table}) as t WHERE row_number = 1;
 end transaction;
 SQL
       elsif @add_data_type == 'upsert'
@@ -598,7 +614,8 @@ SQL
         sql = <<SQL
 begin transaction;
   delete from #{destination_table_name} using #{tmp_table} #{where_id_join};
-  insert into #{destination_table_name} select * from #{tmp_table};
+  insert into #{destination_table_name}
+    select #{columns} from (SELECT row_number() OVER (partition by #{partition_by} #{order_by}), * FROM #{tmp_table}) as t WHERE row_number = 1;
 end transaction;
 SQL
       else
