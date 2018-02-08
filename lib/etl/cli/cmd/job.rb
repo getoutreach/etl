@@ -141,7 +141,25 @@ module ETL::Cli::Cmd
             if klass.nil?
               raise ETL::UsageError, "Cannot find a job with specified job_id: '#{id}'"
             end
+
             batch = klass.batch_factory.parse!(batch_str)
+
+            end_time_str = batch.to_h[:end_time]
+            end_time = Time.parse(end_time_str).utc if !end_time_str.nil? && end_time_str.is_a?(String)
+
+            current_time = Time.now.utc
+
+            end_time_str = (end_time < current_time ? end_time_str : current_time.strftime("%Y-%m-%dT%H:%M:%S.%LZ"))
+
+            batch_h = batch.to_h
+            batch_h[:end_time] = end_time_str
+
+            begin
+              batch = klass.batch_factory.from_hash(batch_h)
+            rescue StandardError => ex
+              raise ETL::UsageError, "Invalid batch value specified (#{ex.message})"
+            end
+
             begin
               run_batch(id, batch)
             rescue StandardError => e
@@ -164,6 +182,23 @@ module ETL::Cli::Cmd
           rescue StandardError => ex
             raise ETL::UsageError, "Invalid batch value specified (#{ex.message})"
           end
+
+          end_time_str = batch.to_h[:end_time]
+          end_time = Time.parse(end_time_str) if !end_time_str.nil? && end_time_str.is_a?(String)
+
+          current_time = Time.now.utc
+
+          end_time_str = (end_time < current_time ? end_time_str : current_time.strftime("%Y-%m-%dT%H:%M:%S.%LZ"))
+
+          batch_h = batch.to_h
+          batch_h[:end_time] = end_time_str
+
+          begin
+            batch = klass.batch_factory.from_hash(batch_h)
+          rescue StandardError => ex
+            raise ETL::UsageError, "Invalid batch value specified (#{ex.message})"
+          end
+
           run_batch(job_id, batch)
         else
           # No batch string
