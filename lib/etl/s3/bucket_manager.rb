@@ -58,8 +58,9 @@ module ETL
         s3_files
       end
 
-      def delete_objects(objects)
-        objects.each { |f| @bucket_resource.object(f).delete }
+      def delete_objects_with_prefix(prefix)
+        objects = @bucket_resource.objects(prefix: prefix)
+        objects.each { |f| f.delete }
       end
     end
   end
