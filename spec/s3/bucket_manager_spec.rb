@@ -7,8 +7,8 @@ RSpec.describe 's3' do
     it 'push files to bucket and delete them' do
       s3_paths = []
       bm = ::ETL::S3::BucketManager.new('test-s3-upload-bucket-1')
+      s3_folder = SecureRandom.hex(8)
       begin
-        s3_folder = SecureRandom.hex(8)
         csv_file_path1 = "valid_csv_1#{SecureRandom.hex(5)}"
         csv_file_path2 = "valid_csv_2#{SecureRandom.hex(5)}"
         csv_file_path3 = "valid_csv_3#{SecureRandom.hex(5)}"
@@ -41,7 +41,7 @@ RSpec.describe 's3' do
         ::File.delete(csv_file_path1)
         ::File.delete(csv_file_path2)
         ::File.delete(csv_file_path3)
-        bm.delete_objects(s3_paths)
+        bm.delete_objects_with_prefix(s3_folder)
       end
     end
     it 'Initialize with non-existant bucket should error' do
