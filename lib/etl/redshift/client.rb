@@ -8,6 +8,8 @@ require 'pathname'
 require 'fileutils'
 require_relative 'stl_load_error'
 require_relative 'nil_string_row_transformer'
+require_relative '../s3/bucket_manager'
+require_relative '../s3/csv_files_uploading_streamer'
 
 module ETL::Redshift
   # when the odbc driver is setup in chef this is the driver's name
@@ -16,7 +18,9 @@ module ETL::Redshift
   # Class that contains shared logic for accessing Redshift.
   class Client
     include ETL::CachedLogger
-    attr_accessor :db, :region, :iam_role, :bucket, :delimiter, :row_columns_symbolized, :cache_table_schema_lookup, :tmp_dir, :stl_load_retries
+    attr_accessor :db, :region, :iam_role, :bucket, :delimiter,
+      :row_columns_symbolized, :cache_table_schema_lookup,
+      :tmp_dir,:stl_load_retries
 
     # when odbc driver is fully working the use redshift driver can
     # default to true
@@ -26,7 +30,8 @@ module ETL::Redshift
       @iam_role = aws_params.fetch(:role_arn)
       @delimiter = "\u0001"
 
-      # note the host is never specified as its part of the dsn name and for now that is hardcoded as 'MyRealRedshift'
+      # note the host is never specified as its part of the dsn name and for
+      # now that is hardcoded as 'MyRealRedshift'
       password = conn_params.fetch(:password)
       dsn = conn_params.fetch(:dsn, 'MyRealRedshift')
       user = conn_params.fetch(:username, nil) || conn_params.fetch(:user, '')
@@ -38,11 +43,14 @@ module ETL::Redshift
       @cached_table_schemas = {}
       @tmp_dir = conn_params.fetch(:tmp_dir, '/tmp')
       @stl_load_retries = 10
-      @slices_s3_files = ENV.fetch('ETL_REDSHIFT_SLICES', "5").to_i
+      @slices_s3_files = ENV.fetch('ETL_REDSHIFT_SLICES', '5').to_i
+      @bucket_manager = ::ETL::S3::BucketManager.new(
+        @bucket, @region, @slices_s3_files
+      )
     end
 
     def s3_resource
-      s3_resource = Aws::S3::Resource.new(region: @region)
+      Aws::S3::Resource.new(region: @region)
     end
 
     def disconnect
@@ -57,7 +65,7 @@ module ETL::Redshift
       s3_file_name = filter_opts.fetch(:s3_filepath)
       query = 'Select * FROM stl_load_errors'
       query += " where filename like '#{s3_file_name}%'" unless s3_file_name.nil?
-      query += " order by filename asc"
+      query += ' order by filename asc'
       db.fetch(query).all
     end
 
@@ -219,25 +227,6 @@ SQL
       raise
     end
 
-    def delete_object_from_s3(bucket, prefix, _session_name)
-      s3 = Aws::S3::Client.new(region: @region)
-      resp = s3.list_objects(bucket: bucket)
-      keys = resp[:contents].select { |content| content.key.start_with? prefix }.map(&:key)
-
-      keys.each { |key| s3.delete_object(bucket: bucket, key: key) }
-    end
-
-    def temp_file(table_name)
-      # creating a daily file path so if the disk gets full its
-      # easy to kiil all the days except the current.
-      date_path = DateTime.now.strftime('%Y_%m_%d')
-      dir_path = "#{@tmp_dir}/redshift/#{date_path}"
-      FileUtils.makedirs(dir_path) unless Dir.exists?(dir_path)
-      tmp_file = "#{dir_path}/#{table_name}_#{SecureRandom.hex(10)}"
-      FileUtils.touch(tmp_file)
-      tmp_file
-    end
-
     # Upserts rows into the destintation tables based on rows
     # provided by the reader.
     def upsert_rows(reader, table_schemas_lookup, row_transformer, validator = nil, copy_options = [])
@@ -252,7 +241,8 @@ SQL
 
     # adds rows into the destintation tables based on rows
     # provided by the reader and their add data type.
-    def add_rows(reader, table_schemas_lookup, row_transformer, validator = nil, copy_options, add_new_data)
+    def add_rows(reader, table_schemas_lookup,
+                 row_transformer, validator = nil, copy_options, add_new_data)
       copy_options = [] if copy_options.nil?
       # Remove new lines ensures that all row values have newlines removed.
       remove_new_lines = ::ETL::Transform::RemoveNewlines.new
@@ -261,17 +251,19 @@ SQL
       row_transformers << row_transformer unless row_transformer.nil?
 
       # adding this at the end of the line to do the last transformation
-      row_transformers << ::ETL::Redshift::NilStringRowTransformer.new(table_schemas_lookup, "*null_string*")
+      row_transformers << ::ETL::Redshift::NilStringRowTransformer.new(table_schemas_lookup, '*null_string*')
       copy_options << "NULL AS '*null_string*'"
 
-      csv_files = {}
-      csv_file_paths = {}
+      s3_folder = "#{table_schemas_lookup.keys.join('_')}_#{SecureRandom.hex(5)}"
+      opts = { delimiter: @delimiter, s3_folder: s3_folder, tmp_dir: @tmp_dir }
+      streamer = ::ETL::S3::CSVFilesUploadingStreamer.new(
+        @bucket_manager, table_schemas_lookup.keys, @slices_s3_files, opts)
+
       rows_processed_map = {}
       table_schemas_lookup.keys.each do |t|
-        csv_file_paths[t] = temp_file(t)
-        csv_files[t] = ::CSV.open(csv_file_paths[t], 'w', col_sep: @delimiter)
         rows_processed_map[t] = 0
       end
+      has_rows = false
 
       begin
         reader.each_row do |row|
@@ -282,45 +274,27 @@ SQL
             tschema = table_schemas_lookup[table_name]
             row_arrays.each do |values_arr|
               csv_row = CSV::Row.new(tschema.columns.keys, values_arr)
-              csv_files[table_name].add_row(csv_row)
+              streamer.add_row(table_name, csv_row)
               rows_processed_map[table_name] += 1
+              has_rows = true
             end
           end
         end
-        table_schemas_lookup.each_pair do |t, tschema|
-          if rows_processed_map[t] == 0
-            log.debug("table #{t} has zero rows no upload required")
-            next
+
+        if has_rows
+          streamer.push_last
+          table_schemas_lookup.each_pair do |t, tschema|
+            tmp_table = create_staging_table(tschema.schema, t)
+            s3_prefix_path = "#{@bucket}/#{s3_folder}/#{t}"
+            copy_from_s3(tmp_table, s3_prefix_path, copy_options)
+            validate_staging_table(validator, add_new_data, tmp_table, tschema, t)
           end
-
-          csv_files[t].close
-          local_file_path = csv_file_paths[t]
-          tmp_table = create_staging_table(tschema.schema, t)
-          copy_multiple_files_from_s3(tmp_table, local_file_path, copy_options)
-
-          full_table = "#{tschema.schema}.#{t}"
-          where_id_join = ''
-          tschema.primary_key.each do |pk|
-            where_id_join = if where_id_join == ''
-                              "where #{full_table}.#{pk} = #{tmp_table}.#{pk}"
-                            else
-                              "#{where_id_join} and #{full_table}.#{pk} = #{tmp_table}.#{pk}"
-                            end
-          end
-
-          validator.validate(t, tmp_table, tschema) if validator
-          add_sql = add_new_data.build_sql(tmp_table, full_table, where_id_join: where_id_join)
-          execute(add_sql)
         end
       ensure
         # if we hit an exception while processing the inputs, we may still have open file handles
         # so go ahead and close them, then delete the files
-        csv_files.each do |table, f|
-          f.close # if the file is already closed, this will do nothing
-        end
-        csv_file_paths.each do |table, f|
-          ::File.delete(f) if ::File.exist?(f)
-        end
+        streamer.delete_files if streamer.csv_file_paths.count > 0
+        @bucket_manager.delete_objects_with_prefix(s3_folder) if streamer.data_pushed
       end
       highest_num_rows_processed = 0
 
@@ -329,108 +303,6 @@ SQL
         highest_num_rows_processed = value if highest_num_rows_processed < value
       end
       highest_num_rows_processed
-    end
-
-    def copy_multiple_files_from_s3(tmp_table, local_file_path, options)
-      error = false
-      s3_errors_file_path = nil
-      stl_load_error_found = false
-      retries = 0
-      current_local_file = local_file_path
-      files = [local_file_path]
-      s3_files = []
-
-      begin
-        s3_prefix, s3_multiple_files = upload_multiple_files_to_s3(current_local_file)
-        s3_files += s3_multiple_files
-        copy_from_s3(tmp_table, s3_prefix, options)
-      rescue => e
-        error = true
-        raise e
-      ensure
-        # To-do: remove all local files
-        remove_chunked_files(current_local_file)
-
-        # delete if no error
-        s3_files.each { |f| s3_resource.bucket(@bucket).object(f).delete } unless error
-      end
-    end
-
-    def upload_multiple_files_to_s3(current_local_file_path, thread_count = 5)
-      file_number = 0
-      mutex       = Mutex.new
-      threads     = []
-
-      files = file_chunker(current_local_file_path)
-      s3_files = []
-      s3_path = ""
-      s3_folder = File.basename(current_local_file_path)
-
-      # delete the folder if it already exists, to make sure we don't accidentally upload duplicates
-      # if we accidentally create a duplicate hash
-      # the "folder" will get recreated as soon as we upload the new files
-      # since a folder in s3 is really just a prefix on the filename
-      s3_resource.bucket(@bucket).objects({prefix: "#{s3_folder}/"}).batch_delete!
-
-      thread_count.times do |i|
-        threads[i] = Thread.new do
-          until files.empty?
-            mutex.synchronize do
-              file_number += 1
-              Thread.current['file_number'] = file_number
-            end
-            file = begin
-                     files.pop
-                   rescue
-                     nil
-                   end
-            next unless file
-
-            s3_file_name = File.basename(file)
-            log.debug("[#{Thread.current['file_number']}/#{file}] uploading...")
-            s3_obj_path = "#{s3_folder}/#{s3_file_name}"
-            s3_resource.bucket(@bucket).object(s3_obj_path).upload_file(file)
-+           s3_path = "#{@bucket}/#{s3_obj_path}"
-            s3_files << s3_obj_path
-          end
-        end
-      end
-      threads.each(&:join)
-      s3_prefix = s3_path.split('_')[0...-1].join("_")
-      [s3_prefix, s3_files]
-    end
-
-    def file_chunker(file)
-      prefix = file.split('.').first.split('/').last
-      line_count = `wc -l "#{file}"`.strip.split(' ')[0].to_i
-      max_line = line_count / @slices_s3_files
-      outfilenum = 1
-      files = []
-      file_path = File.dirname(file)
-
-      File.open(file, 'r') do |fh_in|
-        until fh_in.eof?
-          f_path = "#{file_path}/#{prefix}_#{outfilenum}.csv"
-          File.open(f_path, 'w') do |fh_out|
-            count = 0
-            line = ''
-            while (count < max_line || outfilenum == @slices_s3_files) && !fh_in.eof?
-              line = fh_in.readline
-              fh_out << line
-              count += 1
-            end
-            files << f_path
-          end
-          outfilenum += 1
-        end
-      end
-      files
-    end
-
-    def remove_chunked_files(file)
-      prefix = file.split('.').first.split('/').last
-      file_path = File.dirname(file)
-      system( "rm #{file_path}/#{prefix}_*.csv ")
     end
 
     def table_exists?(schema, table_name)
@@ -447,6 +319,8 @@ SQL
       tmp_table_name
     end
 
+    private
+
     def transform_row(table_schemas_lookup, row_transformers, row)
       row_transformers.each do |t|
         row = t.transform(row)
@@ -454,7 +328,6 @@ SQL
 
       return row if row.is_a? SkipRow
 
-      is_named_rows = false
       raise "Row is not a Hash type, #{row.inspect}" unless row.is_a? Hash
       rows = if row.key?(table_schemas_lookup.keys[0])
                row
@@ -466,7 +339,6 @@ SQL
       rows.each do |key, split_row|
         table_schema = table_schemas_lookup[key]
 
-        split_rows = []
         split_rows = if split_row.is_a? Array
                        split_row
                      else
@@ -490,22 +362,20 @@ SQL
       values_by_table
     end
 
-    def self.remove_line_at(position, input_file, new_file)
-      current_line_number = 1
-      line_removed = ''
-      open(input_file, 'r') do |f|
-        open(new_file, 'w') do |f2|
-          f.each_line do |line|
-            if current_line_number == position
-              line_removed = line
-            else
-              f2.write(line)
-            end
-            current_line_number += 1
-          end
-        end
+    def validate_staging_table(validator, add_new_data, tmp_table, tschema, t)
+      full_table = "#{tschema.schema}.#{t}"
+      where_id_join = ''
+      tschema.primary_key.each do |pk|
+        where_id_join = if where_id_join == ''
+                          "where #{full_table}.#{pk} = #{tmp_table}.#{pk}"
+                        else
+                          "#{where_id_join} and #{full_table}.#{pk} = #{tmp_table}.#{pk}"
+                        end
       end
-      line_removed
+
+      validator.validate(t, tmp_table, tschema) if validator
+      add_sql = add_new_data.build_sql(tmp_table, full_table, where_id_join: where_id_join)
+      execute(add_sql)
     end
   end
 

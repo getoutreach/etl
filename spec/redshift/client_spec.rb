@@ -1,6 +1,8 @@
 require 'etl/redshift/client'
 require 'etl/redshift/table'
+require 'etl/s3/bucket_manager'
 require 'etl/core'
+require 'aws-sdk'
 
 def create_test_file(filename = "client_test_file", rows = 20)
   File.open(filename, "w+") do |f|
@@ -223,94 +225,8 @@ SQL
       expect(values).to eq([{:count=>3}])
 
       # Delete s3 files
-      client.delete_object_from_s3(bucket, table_name, table_name)
-    end
-
-    context 'validate copy from s3' do
-      def create_table(c)
-        c.drop_table('public', 'test_s3_copy')
-        create_table = <<SQL
-    create table test_s3_copy (
-      id integer,
-      col2 varchar(5),
-      PRIMARY KEY(id) );
-SQL
-        c.execute(create_table)
-      end
-
-      it '#copy_multiple_files_from_s3' do
-        create_table(client)
-
-        csv_file_path = "valid_csv_#{SecureRandom.hex(5)}"
-        csv_file = ::CSV.open(csv_file_path, 'w', col_sep: client.delimiter)
-        csv_file.add_row(CSV::Row.new(["id", "col2"], [1, '1']))
-        csv_file.add_row(CSV::Row.new(["id", "col2"], [2, '2']))
-        csv_file.add_row(CSV::Row.new(["id", "col2"], [3, '2']))
-        csv_file.add_row(CSV::Row.new(["id", "col2"], [4, '2']))
-        csv_file.add_row(CSV::Row.new(["id", "col2"], [5, '2']))
-        csv_file.add_row(CSV::Row.new(["id", "col2"], [6, '2']))
-        csv_file.add_row(CSV::Row.new(["id", "col2"], [7, '2']))
-        csv_file.add_row(CSV::Row.new(["id", "col2"], [8, '2']))
-        csv_file.add_row(CSV::Row.new(["id", "col2"], [9, '2']))
-        csv_file.close
-
-        client.copy_multiple_files_from_s3('test_s3_copy', csv_file_path, [])
-
-        result = client.fetch("select count(*) from test_s3_copy").all
-        expect(result[0][:count]).to eq(9)
-
-        ::File.delete(csv_file_path)
-      end
-    end
-
-    it "#upload_multiple_files_to_s3" do
-      create_test_file
-      client2 = ETL::Redshift::Client.new(ETL.config.redshift[:test], ETL.config.aws[:test])
-      create_test_table(client2)
-      client2.delimiter = '|'
-      client2.s3_resource.bucket(client2.bucket).objects({prefix: "client_test_file/"}).batch_delete!
-      expect(client2.s3_resource.bucket(client2.bucket).object('client_test_file/client_test_file_1.csv').exists?).to eq(false)
-      client2.upload_multiple_files_to_s3("client_test_file")
-      expect(client2.s3_resource.bucket(client2.bucket).object('client_test_file/client_test_file_1.csv').exists?).to eq(true)
-      client2.copy_from_s3('client_test', "ss-uw1-stg.redshift-testing/client_test_file/client_test_file")
-      client2.remove_chunked_files("client_test_file")
-
-      result = client2.fetch("select count(*) from client_test").all
-      expect(result[0][:count]).to eq(20)
-      delete_test_file
-      client2.s3_resource.bucket(client2.bucket).objects({prefix: "client_test_file/"}).batch_delete!
-      expect(client2.s3_resource.bucket(client2.bucket).object('client_test_file/client_test_file_1.csv').exists?).to eq(false)
-    end
-
-    it 'removes folder if it already exists' do
-      client2 = ETL::Redshift::Client.new(ETL.config.redshift[:test], ETL.config.aws[:test])
-      # make sure the destination folder doesn't exist
-      client2.s3_resource.bucket(client2.bucket).objects({prefix: "client_test_file/"}).batch_delete!
-
-      # upload a file with 20 rows
-      # this gets chunked into 5 files with 4 rows each
-      create_test_file("client_test_file", 20)
-      client2.upload_multiple_files_to_s3("client_test_file")
-      delete_test_file
-      client2.remove_chunked_files("client_test_file")
-
-      # now upload another file with only 10 rows
-      # this gets chunked into 5 files with 2 rows each
-      create_test_file("client_test_file", 10)
-      client2.upload_multiple_files_to_s3("client_test_file")
-      delete_test_file
-      create_test_table(client2)
-      client2.delimiter = '|'
-      client2.copy_from_s3('client_test', "ss-uw1-stg.redshift-testing/client_test_file/client_test_file")
-      client2.remove_chunked_files("client_test_file")
-      # clear out the temp files from s3
-      expect(client2.s3_resource.bucket(client2.bucket).object('client_test_file/client_test_file_1.csv').exists?).to eq(true)
-      client2.s3_resource.bucket(client2.bucket).objects({prefix: "client_test_file/"}).batch_delete!
-      expect(client2.s3_resource.bucket(client2.bucket).object('client_test_file/client_test_file_1.csv').exists?).to eq(false)
-
-      # verify we only got 10 rows
-      result = client2.fetch("select count(*) from client_test").all
-      expect(result[0][:count]).to eq(10)
+      @bucket_manager = ::ETL::S3::BucketManager.new(bucket, ETL.config.aws[:test][:region])
+      @bucket_manager.delete_objects_with_prefix(table_name)
     end
   end
 end
