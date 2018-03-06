@@ -27,8 +27,8 @@ module ETL
         Thread.abort_on_exception = true
         @thread_count.times do |i|
           threads[i] = Thread.new do
-            until files.empty?
-              file = files.pop
+            until c_arr.empty?
+              file = c_arr.pop
               next unless file
               size = File.size(file)
               next if size.zero?

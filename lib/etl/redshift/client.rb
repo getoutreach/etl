@@ -20,7 +20,7 @@ module ETL::Redshift
     include ETL::CachedLogger
     attr_accessor :db, :region, :iam_role, :bucket, :delimiter,
       :row_columns_symbolized, :cache_table_schema_lookup,
-      :tmp_dir,:stl_load_retries
+      :tmp_dir, :stl_load_retries
 
     # when odbc driver is fully working the use redshift driver can
     # default to true
@@ -287,7 +287,7 @@ SQL
             tmp_table = create_staging_table(tschema.schema, t)
             s3_prefix_path = "#{@bucket}/#{s3_folder}/#{t}"
             copy_from_s3(tmp_table, s3_prefix_path, copy_options)
-            validate_staging_table(validator, add_new_data, tmp_table, tschema, t)
+            execute_staging_table_validation(validator, add_new_data, tmp_table, tschema, t)
           end
         end
       ensure
@@ -362,7 +362,7 @@ SQL
       values_by_table
     end
 
-    def validate_staging_table(validator, add_new_data, tmp_table, tschema, t)
+    def execute_staging_table_validation(validator, add_new_data, tmp_table, tschema, t)
       full_table = "#{tschema.schema}.#{t}"
       where_id_join = ''
       tschema.primary_key.each do |pk|
