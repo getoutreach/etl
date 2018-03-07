@@ -3,6 +3,7 @@ require 'aws-sdk'
 require 'csv'
 require_relative '../redshift/client'
 require_relative '../redshift/table'
+require_relative '../util/tmp_util'
 
 module ETL::Output
 
@@ -24,7 +25,7 @@ module ETL::Output
     end
 
     def csv_file
-      @csv_file ||= @client.temp_file(dest_table)
+      @csv_file ||= ETL::TmpUtil.by_day(@client.tmp_dir, 's3', dest_table)
     end
 
     def exec_query(sql)
