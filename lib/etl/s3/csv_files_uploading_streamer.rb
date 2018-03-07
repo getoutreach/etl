@@ -8,18 +8,23 @@ module ETL
     # CSVFilesUploadingStreamer will push csv files into s3
     # when the sum of the files is greater than a specified amount.
     class CSVFilesUploadingStreamer
-      attr_accessor :s3_folder, :csv_file_paths, :data_pushed
+      attr_accessor :s3_folder, :csv_file_paths, :data_pushed, :parts_s3_folders
       def initialize(bucket_manager, parts, num_part_shards, opts = {})
         @bucket_manager = bucket_manager
         @parts = parts
         @num_shards = num_part_shards
-        @s3_folder = opts.fetch(:s3_folder, SecureRandom.hex(8))
+        @s3_folder = opts.fetch(:s3_folder, SecureRandom.hex(4))
         @delimiter = opts.fetch(:delimiter, "\u0001")
         @max_sum_file_size_mb = opts.fetch(:max_sum_file_size_mb, 50)
         @tmp_dir = opts.fetch(:tmp_dir, '/tmp')
 
         @row_number = 0
         @data_pushed = false
+
+        @parts_s3_folders = {}
+        @parts.each do |p|
+          @parts_s3_folders[p] = "#{@s3_folder}/#{p}/#{SecureRandom.hex(4)}"
+        end
         init_csvs
       end
 
@@ -38,8 +43,7 @@ module ETL
         close_files
 
         # upload files
-        @bucket_manager.push(@s3_folder, @csv_file_paths.values)
-        @data_pushed = true
+        push_parts
 
         # delete local files
         delete_files
@@ -77,6 +81,15 @@ module ETL
 
       private
 
+      def push_parts
+        # upload files by parts in separate folders
+        @parts.each do |p|
+          part_file_paths = @csv_file_paths_by_part[p]
+          @bucket_manager.push(@parts_s3_folders[p], part_file_paths)
+        end
+        @data_pushed = true
+      end
+
       def add_row_internal(part, csv_row)
         shard_num = @current_part_shard_index[part]
         key = "#{part}.#{shard_num}"
@@ -96,9 +109,7 @@ module ETL
         # close the files prior to upload
         close_files
 
-        # upload files
-        @bucket_manager.push(@s3_folder, @csv_file_paths.values)
-        @data_pushed = true
+        push_parts
 
         # close/delete files
         delete_files
@@ -110,6 +121,7 @@ module ETL
       def init_csvs
         @csv_files = {}
         @csv_file_paths = {}
+        @csv_file_paths_by_part = {}
         @current_part_shard_index = {}
         @parts.each do |p|
           init_part_csvs(p)
@@ -119,9 +131,11 @@ module ETL
       def init_part_csvs(part)
         raise ArgumentError, 'part cannot be nil' if part.nil?
         @current_part_shard_index[part] = 0
+        @csv_file_paths_by_part[part] = []
         (0..@num_shards).each do |i|
           key = "#{part}.#{i}"
           @csv_file_paths[key] = ETL::TmpUtil.by_day(@tmp_dir, 's3', key)
+          @csv_file_paths_by_part[part] << @csv_file_paths[key]
           @csv_files[key] = ::CSV.open(
             @csv_file_paths[key], 'w', col_sep: @delimiter
           )
