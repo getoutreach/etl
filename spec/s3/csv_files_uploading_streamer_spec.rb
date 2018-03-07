@@ -23,7 +23,7 @@ RSpec.describe 's3' do
     let(:column_names_arr) { [orgs_column_names, org_history_column_names] }
     let(:table_names) { %w[orgs orgs_history] }
     it 'Validate then when size exceeds 5MBs the files are uploaded' do
-      test_writing_rows(100, 1)
+      test_writing_rows(100, 2)
     end
 
     it 'Write rows, never go over limit, validate no push' do
@@ -33,7 +33,7 @@ RSpec.describe 's3' do
     it 'Write rows, validate push end' do
       hash = test_writing_rows(50, 0)
       hash[:streamer].push_last
-      expect(hash[:bucket_manager].num_pushes).to eq(1)
+      expect(hash[:bucket_manager].num_pushes).to eq(2)
     end
 
     it 'Write rows, validate push end' do

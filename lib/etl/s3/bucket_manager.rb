@@ -22,8 +22,7 @@ module ETL
           c_arr << f
         end
 
-        s3_files = []
-        files = local_filepaths.clone
+        s3_files = Concurrent::Array.new
         Thread.abort_on_exception = true
         @thread_count.times do |i|
           threads[i] = Thread.new do
@@ -34,7 +33,9 @@ module ETL
               next if size.zero?
 
               s3_file_name = File.basename(file)
-              ETL.logger.debug("[#{s3_file_name}] uploading...")
+
+              s3_path = "#{s3_file_name}/#{s3_folder}"
+              ETL.logger.debug("[Uploading from: '#{s3_file_name}' to '#{s3_path}']")
               s3_files << upload_file(file, s3_file_name, s3_folder)
             end
           end

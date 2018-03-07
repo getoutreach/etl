@@ -254,8 +254,7 @@ SQL
       row_transformers << ::ETL::Redshift::NilStringRowTransformer.new(table_schemas_lookup, '*null_string*')
       copy_options << "NULL AS '*null_string*'"
 
-      s3_folder = "#{table_schemas_lookup.keys.join('_')}_#{SecureRandom.hex(5)}"
-      opts = { delimiter: @delimiter, s3_folder: s3_folder, tmp_dir: @tmp_dir }
+      opts = { delimiter: @delimiter, tmp_dir: @tmp_dir }
       streamer = ::ETL::S3::CSVFilesUploadingStreamer.new(
         @bucket_manager, table_schemas_lookup.keys, @slices_s3_files, opts)
 
@@ -284,9 +283,12 @@ SQL
         if has_rows
           streamer.push_last
           table_schemas_lookup.each_pair do |t, tschema|
+            rows_processed = rows_processed_map[t]
+            next if rows_processed.zero?
             tmp_table = create_staging_table(tschema.schema, t)
-            s3_prefix_path = "#{@bucket}/#{s3_folder}/#{t}"
-            copy_from_s3(tmp_table, s3_prefix_path, copy_options)
+            s3_prefix_path = streamer.parts_s3_folders[t]
+            s3_path = "#{@bucket}/#{s3_prefix_path}"
+            copy_from_s3(tmp_table, s3_path, copy_options)
             execute_staging_table_validation(validator, add_new_data, tmp_table, tschema, t)
           end
         end
@@ -294,7 +296,7 @@ SQL
         # if we hit an exception while processing the inputs, we may still have open file handles
         # so go ahead and close them, then delete the files
         streamer.delete_files if streamer.csv_file_paths.count > 0
-        @bucket_manager.delete_objects_with_prefix(s3_folder) if streamer.data_pushed
+        @bucket_manager.delete_objects_with_prefix(streamer.s3_folder) if streamer.data_pushed
       end
       highest_num_rows_processed = 0
 
