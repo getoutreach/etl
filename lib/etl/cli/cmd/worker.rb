@@ -9,7 +9,9 @@ module ETL::Cli::Cmd
       notifier = ::ETL::Slack::Notifier.create_instance("etl_worker")
 
       begin
+        ETL.logger.debug("Starting the worker!")
         ETL.load_user_classes
+        ETL.logger.debug("Classes loaded, waiting for work!")
         ETL.queue.handle_incoming_messages
       rescue StandardError => e
         ETL.logger.exception(e, Logger::DEBUG)

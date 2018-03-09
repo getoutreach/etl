@@ -55,7 +55,8 @@ module ETL::Queue
         # note not acking on non user exceptions because we want the messages to be re-queued if process was killed though a sigterm
         begin
           log.debug("Payload: #{payload.to_s}")
-          ETL::Job::Exec.new(payload).run
+          exec = ETL::Job::Exec.new(payload)
+          exec.run unless exec.nil?
           ETL.queue.ack(message_info)
         rescue StandardError => ex
           # Log and ignore all exceptions. We want other jobs in the queue

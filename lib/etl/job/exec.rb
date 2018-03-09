@@ -114,6 +114,7 @@ module ETL::Job
         jr.exception(ex)
         notifier.add_field_to_attachments({ "title" => "Error message", "value" => ETL::Logger.create_exception_message(ex)}) unless notifier.nil?
       rescue StandardError => ex
+        log.exception(ex)
         # for all other exceptions: save the message
         jr.exception(ex) unless jr.nil? # When a batch fails to validate it can be nil
         notifier.add_field_to_attachments({ "title" => "Error message", "value" => ETL::Logger.create_exception_message(ex)}) unless notifier.nil?
