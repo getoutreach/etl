@@ -80,7 +80,7 @@ module ETL::Slack
             end
           rescue Slack::Notifier::APIError => api_error
             ETL.logger.exception(api_error)
-            if api_message.include?('rate_limit')
+            if api_error.message.include?('rate_limit')
               @error_occurred_at_time = Time.now @error_occurred_at_time.nil?
               # after each failure doubling the time to wait to backoff
               @wait_time_seconds = @wait_time_seconds + rand(@wait_time_seconds-5..@wait_time_seconds+5)
