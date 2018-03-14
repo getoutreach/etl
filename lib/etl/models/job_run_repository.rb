@@ -231,7 +231,7 @@ module ETL::Model
       result = nil
 
       ETL::Model.jrr_mutex.synchronize do
-        result = conn.exec(sql)
+        result = exec_sql_with_connection_retries(sql)
       end
       result
     end
