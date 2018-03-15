@@ -237,7 +237,7 @@ module ETL::Model
     end
 
     def exec_sql_with_connection_retries(sql)
-      current_retry_interval = @initial_retry_interval_seconds
+      current_retry_interval = @initial_interval_retry_seconds
       current_num_retries = 0
       continue_retrying = true
       result = nil
