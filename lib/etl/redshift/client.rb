@@ -20,7 +20,7 @@ module ETL::Redshift
     include ETL::CachedLogger
     attr_accessor :region, :iam_role, :bucket, :delimiter,
       :row_columns_symbolized, :cache_table_schema_lookup,
-      :tmp_dir, :stl_load_retries, :max_connection_retries,
+      :tmp_dir, :stl_load_retries, :max_connection_retries
 
     # when odbc driver is fully working the use redshift driver can
     # default to true
