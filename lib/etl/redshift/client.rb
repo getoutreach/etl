@@ -18,9 +18,9 @@ module ETL::Redshift
   # Class that contains shared logic for accessing Redshift.
   class Client
     include ETL::CachedLogger
-    attr_accessor :db, :region, :iam_role, :bucket, :delimiter,
+    attr_accessor :region, :iam_role, :bucket, :delimiter,
       :row_columns_symbolized, :cache_table_schema_lookup,
-      :tmp_dir, :stl_load_retries
+      :tmp_dir, :stl_load_retries, :max_connection_retries,
 
     # when odbc driver is fully working the use redshift driver can
     # default to true
@@ -47,6 +47,7 @@ module ETL::Redshift
       @bucket_manager = ::ETL::S3::BucketManager.new(
         @bucket, @region, @slices_s3_files
       )
+      @max_connection_retries = 5
     end
 
     def s3_resource
@@ -54,6 +55,7 @@ module ETL::Redshift
     end
 
     def disconnect
+      return if @db.nil? # no need to disconnect if its nil
       db.disconnect
     end
 
@@ -66,37 +68,95 @@ module ETL::Redshift
       query = 'Select * FROM stl_load_errors'
       query += " where filename like '#{s3_file_name}%'" unless s3_file_name.nil?
       query += ' order by filename asc'
-      db.fetch(query).all
+      fetch(query).all
     end
 
     def stl_load_error_details(query_id)
       query = "Select * FROM STL_LOADERROR_DETAIL where query = '#{query_id}'"
-      db.fetch(query).all
+      fetch(query).all
     end
 
     def execute_ddl(sql)
-      log.debug("execute_ddl SQL: '#{sql}'")
-      db.execute_ddl(sql)
+      retries = 0
+      begin
+        log.debug("execute_ddl SQL: '#{sql}'")
+        db.execute_ddl(sql)
+      rescue ::Sequel::DatabaseDisconnectError => e
+        if retries <= @max_connection_retries
+          retries += 1
+          sleep 2 ** retries
+          retry
+        else
+          raise "Timeout: #{e.message}"
+        end
+      end
     end
 
     def execute_dui(sql)
-      log.debug("execute_dui SQL: '#{sql}'")
-      db.execute_dui(sql)
+      retries = 0
+      begin
+        log.debug("execute_dui SQL: '#{sql}'")
+        db.execute_dui(sql)
+      rescue ::Sequel::DatabaseDisconnectError => e
+        if retries <= @max_connection_retries
+          retries += 1
+          sleep 2 ** retries
+          retry
+        else
+          raise "Timeout: #{e.message}"
+        end
+      end
     end
 
     def execute_insert(sql)
-      log.debug("execute insert: SQL: '#{sql}'")
-      db.execute_insert(sql)
+      retries = 0
+      begin
+        log.debug("execute insert: SQL: '#{sql}'")
+        db.execute_insert(sql)
+      rescue ::Sequel::DatabaseDisconnectError => e
+        if retries <= @max_connection_retries
+          @db = nil
+          retries += 1
+          sleep 2 ** retries
+          retry
+        else
+          raise "Timeout: #{e.message}"
+        end
+      end
     end
 
     def fetch(sql)
-      log.debug("fetch SQL: '#{sql}'")
-      db.fetch(sql)
+      retries = 0
+      begin
+        log.debug("fetch SQL: '#{sql}'")
+        db.fetch(sql)
+      rescue ::Sequel::DatabaseDisconnectError => e
+        if retries <= @max_connection_retries
+          @db = nil
+          retries += 1
+          sleep 2 ** retries
+          retry
+        else
+          raise "Timeout: #{e.message}"
+        end
+      end
     end
 
     def execute(sql)
-      log.debug("execute SQL: '#{sql}'")
-      db.execute(sql)
+      retries = 0
+      begin
+        log.debug("execute SQL: '#{sql}'")
+        db.execute(sql)
+      rescue ::Sequel::DatabaseDisconnectError => e
+        if retries <= @max_connection_retries
+          @db = nil
+          retries += 1
+          sleep 2 ** retries
+          retry
+        else
+          raise "Timeout: #{e.message}"
+        end
+      end
     end
 
     def drop_table(schema_name, table_name)
