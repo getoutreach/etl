@@ -11,7 +11,7 @@ module ETL::Model
   # handles interacting with the data store.
   class JobRunRepository
     include ETL::CachedLogger
-    attr_accessor :schema_name, :max_connection_retries, :initial_retry_interval_seconds
+    attr_accessor :schema_name, :max_connection_retries
     # allows configuration of another Repository
     class << self; attr_accessor :instance end
     @@instance = ETL::Model::JobRunRepository.new
@@ -23,7 +23,6 @@ module ETL::Model
       @conn_params = prep_conn(@conn_params)
       ETL::Model.jrr_mutex = Mutex.new if ETL::Model.jrr_mutex.nil?
       @max_connection_retries = 5
-      @initial_interval_retry_seconds = 5
     end
 
     def prep_conn(conn_params)
@@ -231,27 +230,18 @@ module ETL::Model
       result = nil
 
       ETL::Model.jrr_mutex.synchronize do
-        result = exec_sql_with_connection_retries(sql)
-      end
-      result
-    end
-
-    def exec_sql_with_connection_retries(sql)
-      current_retry_interval = @initial_interval_retry_seconds
-      current_num_retries = 0
-      continue_retrying = true
-      result = nil
-      while continue_retrying
+        retries = 0
         begin
           result = conn.exec(sql)
-          continue_retrying = false
-        rescue PG::UnableToSend => ue
-          raise ue if current_num_retries > @max_connection_retries
-          ETL.logger.debug("PG::UnableToSend connection error has occurred, attempt to retry")
-          @conn = nil # set to nil so it will create a new connection
-          sleep current_retry_interval
-          current_retry_interval += current_retry_interval #doubling the interval to crudely backoff
-          current_num_retries +=1
+        rescue ::PG::UnableToSend => e
+          if retries <= @max_connection_retries
+            @conn = nil
+            retries += 1
+            sleep 2 ** retries
+            retry
+          else
+            raise "Timeout: #{e.message}"
+          end
         end
       end
       result
