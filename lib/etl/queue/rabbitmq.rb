@@ -1,5 +1,6 @@
 require 'etl/queue/payload'
 require 'bunny'
+require 'socket'
 
 module ETL::Queue
 
@@ -8,6 +9,8 @@ module ETL::Queue
 
     def initialize(params)
       @params = params
+      @max_connection_retries = 5
+
       amqp_uri = params[:amqp_uri]
       if amqp_uri.nil? then
         opts = {
@@ -28,11 +31,27 @@ module ETL::Queue
           )
       end
 
-      @conn.start
+      start_connection
       @channel = @conn.create_channel(nil, params[:channel_pool_size])
       @channel.prefetch(params[:prefetch_count])
       @queue = @channel.queue(params[:queue], :durable => true)
       @block = params.fetch(:block, true)
+    end
+
+    def start_connection
+      retries = 0
+      begin
+        @conn.start
+      rescue Bunny::TCPConnectionFailedForAllHosts => e
+        if retries <= @max_connection_retries
+          ETL.logger.debug("Starting to retry rabbitmq connection start: #{retries}")
+          retries += 1
+          sleep 2 ** retries
+          retry
+        else
+          raise "RabbitMQ connection Retries failed on #{Socket.gethostname}: #{e.message}"
+        end
+      end
     end
 
     def to_s
