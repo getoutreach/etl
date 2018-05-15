@@ -307,7 +307,8 @@ SQL
       copy_options = [] if copy_options.nil?
       # Remove new lines ensures that all row values have newlines removed.
       remove_new_lines = ::ETL::Transform::RemoveNewlines.new
-      row_transformers = [remove_new_lines]
+      date_time_transformer = ::ETL::Redshift::DateTimeTransformer.new(table_schemas_lookup)
+      row_transformers = [remove_new_lines, date_time_transformer]
 
       row_transformers << row_transformer unless row_transformer.nil?
 
