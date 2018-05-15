@@ -29,7 +29,7 @@ module ETL::Redshift
       @bucket = aws_params.fetch(:s3_bucket)
       @iam_role = aws_params.fetch(:role_arn)
       @delimiter = "\u0001"
-      @skip_folder_delete = ENV.fetch('REDSHIFT_SKIP_S3_LOAD_FOLDER', nil)
+      @skip_folder_delete = ENV.fetch('REDSHIFT_SKIP_DELETE_S3_LOAD_FOLDER', nil)
 
       # note the host is never specified as its part of the dsn name and for
       # now that is hardcoded as 'MyRealRedshift'
