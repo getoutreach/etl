@@ -116,6 +116,8 @@ module ETL
                    t.boolean(col_name)
                  when 'timestamp'
                    t.timestamp(col_name)
+                when 'timestamptz'
+                   t.timestamp(col_name)
                  when 'date'
                    t.date(col_name)
                  when 'text'
