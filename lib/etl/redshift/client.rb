@@ -29,6 +29,7 @@ module ETL::Redshift
       @bucket = aws_params.fetch(:s3_bucket)
       @iam_role = aws_params.fetch(:role_arn)
       @delimiter = "\u0001"
+      @skip_folder_delete = ENV.fetch('REDSHIFT_SKIP_DELETE_S3_LOAD_FOLDER', nil)
 
       # note the host is never specified as its part of the dsn name and for
       # now that is hardcoded as 'MyRealRedshift'
@@ -356,7 +357,9 @@ SQL
         # if we hit an exception while processing the inputs, we may still have open file handles
         # so go ahead and close them, then delete the files
         streamer.delete_files if streamer.csv_file_paths.count > 0
-        @bucket_manager.delete_objects_with_prefix(streamer.s3_folder) if streamer.data_pushed
+        if streamer.data_pushed && @skip_folder_delete.nil?
+          @bucket_manager.delete_objects_with_prefix(streamer.s3_folder)
+        end
       end
       highest_num_rows_processed = 0
 
