@@ -1,4 +1,5 @@
 require_relative '../slack/notifier'
+require_relative '../datadog/client'
 require 'socket'
 
 module ETL::Job
@@ -63,6 +64,14 @@ module ETL::Job
 
         measurements[:rows_processed] = result.rows_processed
 
+        datadog_client = job.datadog_client
+
+        if !datadog_client.nil? && jr.success?
+          datadog_event = "ETL:Job_Id: #{@payload.job_id}, Job_Status: #{jr.status}, Processed rows: #{result.rows_processed}"
+        else
+          datadog_event = "ETL:Job_Id: #{@payload.job_id}, Job_Status: #{jr.status}, Processed rows: 0"
+        end
+
       rescue RetryError => ex
         # By default we want to retry database errors...
         do_retry = true
@@ -82,6 +91,7 @@ module ETL::Job
         # we aren't retrying anymore - log this error
         jr.exception(ex)
         notifier.add_field_to_attachments({ "title" => "Error message", "value" => ETL::Logger.create_exception_message(ex)}) unless notifier.nil?
+        datadog_event = "ETL:Job_Id: #{@payload.job_id}, Error: #{ETL::Logger.create_exception_message(ex)}"
 
       rescue Sequel::DatabaseError => ex
         # By default we want to retry database errors...
@@ -113,16 +123,23 @@ module ETL::Job
         # we aren't retrying anymore - log this error
         jr.exception(ex)
         notifier.add_field_to_attachments({ "title" => "Error message", "value" => ETL::Logger.create_exception_message(ex)}) unless notifier.nil?
+        datadog_event = "ETL:Job_Id: #{@payload.job_id}, Error: #{ETL::Logger.create_exception_message(ex)}"
+
       rescue StandardError => ex
         log.exception(ex)
         # for all other exceptions: save the message
         jr.exception(ex) unless jr.nil? # When a batch fails to validate it can be nil
         notifier.add_field_to_attachments({ "title" => "Error message", "value" => ETL::Logger.create_exception_message(ex)}) unless notifier.nil?
+        datadog_event = "ETL:Job_Id: #{@payload.job_id}, Error: #{ETL::Logger.create_exception_message(ex)}"
       end
 
       if !notifier.nil?
         notifier.add_text_to_attachments("Job duration: #{jr.ended_at - jr.started_at}")
         notifier.notify("#{@payload.job_id} summary")
+      end
+
+      if !datadog_client.nil? && job.respond_to?('send_result_to_datadog') && job.send_result_to_datadog
+        datadog_client.send_event(datadog_event)
       end
 
       metrics.point(

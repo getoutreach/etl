@@ -28,6 +28,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'influxdb'
   spec.add_dependency 'pg'
   spec.add_dependency 'aws-sdk', ['>= 2.0', '< 3.0']
+  spec.add_dependency 'dogapi'
   spec.add_dependency 'slack-notifier'
   spec.add_dependency 'terminal-table'
   spec.add_dependency 'concurrent-ruby'
