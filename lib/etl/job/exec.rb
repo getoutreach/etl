@@ -67,7 +67,7 @@ module ETL::Job
         datadog_client = job.datadog_client
         ds_etl = "DS_ETL"
 
-        if !datadog_client.nil? && jr.success?
+        if jr.success?
           datadog_event = "#{ds_etl} Job_Id: #{@payload.job_id}, Job_Status: #{jr.status}, Processed rows: #{result.rows_processed}"
         else
           datadog_event = "#{ds_etl} Job_Id: #{@payload.job_id}, Job_Status: #{jr.status}, Processed rows: 0"
