@@ -1,5 +1,6 @@
 require 'mixins/cached_logger'
 require 'slack/notifier'
+require 'datadog/client'
 
 module ETL::Job
 
@@ -7,12 +8,13 @@ module ETL::Job
   class Base
     include ETL::CachedLogger
     
-    attr_reader :batch, :notifier
+    attr_reader :batch, :notifier, :datadog_client
     
     def initialize(b)
       @batch = b
       @notifier = ::ETL::Slack::Notifier.create_instance(id)
-      @notifier.add_text_to_attachments("Batch: #{@batch.to_h}") if @notifier and !@batch.to_h.empty? 
+      @notifier.add_text_to_attachments("Batch: #{@batch.to_h}") if @notifier and !@batch.to_h.empty?
+      @datadog_client = ::ETL::Datadog::Client.create_instance()
     end
     
     # Registers a job class with the manager. This is typically called by
