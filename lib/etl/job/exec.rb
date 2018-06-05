@@ -140,6 +140,9 @@ module ETL::Job
       end
 
       if !datadog_client.nil? && job.respond_to?('send_result_to_datadog') && job.send_result_to_datadog
+        unless notifier.nil?
+          datadog_event.concat(", Host_Name: #{host_name}")
+        end
         datadog_client.send_event(datadog_event)
       end
 
