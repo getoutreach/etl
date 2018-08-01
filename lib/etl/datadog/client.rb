@@ -19,9 +19,13 @@ module ETL::Datadog
       end
     end
 
-    def send_event(message)
+    def send_event(message, message_title, alert_type, tags = ['ETL_JOB_STATUS_EVENTS'])
       unless @host_name.nil?
-        @client.emit_event(Dogapi::Event.new(message), :host => @host_name)
+        @client.emit_event(Dogapi::Event.new(message,
+                                             :msg_title => message_title,
+                                             :alert_type => alert_type,
+                                             :tags => tags),
+                           :host => @host_name)
       end
     end
 
