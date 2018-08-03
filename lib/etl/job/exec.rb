@@ -68,9 +68,11 @@ module ETL::Job
         etl_events = "ETL_EVENTS"
 
         if jr.success?
-          datadog_event = "#{etl_events} Job_Id: #{@payload.job_id}, Job_Status: #{jr.status}, Processed rows: #{result.rows_processed}"
+          datadog_event_msg = "#{etl_events} Job_Id: #{@payload.job_id}, Job_Status: #{jr.status}, Processed rows: #{result.rows_processed}"
+          datadog_event_alert_type = "success"
         else
-          datadog_event = "#{etl_events} Job_Id: #{@payload.job_id}, Job_Status: #{jr.status}, Processed rows: 0"
+          datadog_event_msg = "#{etl_events} Job_Id: #{@payload.job_id}, Job_Status: #{jr.status}, Processed rows: 0"
+          datadog_event_alert_type = "error"
         end
 
       rescue RetryError => ex
@@ -92,7 +94,8 @@ module ETL::Job
         # we aren't retrying anymore - log this error
         jr.exception(ex)
         notifier.add_field_to_attachments({ "title" => "Error message", "value" => ETL::Logger.create_exception_message(ex)}) unless notifier.nil?
-        datadog_event = "#{etl_events} Job_Id: #{@payload.job_id}, Error: #{ETL::Logger.create_exception_message(ex)}"
+        datadog_event_msg = "#{etl_events} Job_Id: #{@payload.job_id}, Error: #{ETL::Logger.create_exception_message(ex)}"
+        datadog_event_alert_type = "error"
 
       rescue Sequel::DatabaseError => ex
         # By default we want to retry database errors...
@@ -124,14 +127,16 @@ module ETL::Job
         # we aren't retrying anymore - log this error
         jr.exception(ex)
         notifier.add_field_to_attachments({ "title" => "Error message", "value" => ETL::Logger.create_exception_message(ex)}) unless notifier.nil?
-        datadog_event = "#{etl_events} Job_Id: #{@payload.job_id}, Error: #{ETL::Logger.create_exception_message(ex)}"
+        datadog_event_msg = "#{etl_events} Job_Id: #{@payload.job_id}, Error: #{ETL::Logger.create_exception_message(ex)}"
+        datadog_event_alert_type = "error"
 
       rescue StandardError => ex
         log.exception(ex)
         # for all other exceptions: save the message
         jr.exception(ex) unless jr.nil? # When a batch fails to validate it can be nil
         notifier.add_field_to_attachments({ "title" => "Error message", "value" => ETL::Logger.create_exception_message(ex)}) unless notifier.nil?
-        datadog_event = "#{etl_events} Job_Id: #{@payload.job_id}, Error: #{ETL::Logger.create_exception_message(ex)}"
+        datadog_event_msg = "#{etl_events} Job_Id: #{@payload.job_id}, Error: #{ETL::Logger.create_exception_message(ex)}"
+        datadog_event_alert_type = "error"
       end
 
       if !notifier.nil?
@@ -141,9 +146,9 @@ module ETL::Job
 
       if !datadog_client.nil? && job.respond_to?('send_result_to_datadog') && job.send_result_to_datadog
         unless host_name.nil?
-          datadog_event.concat(", Host_Name: #{host_name}")
+          datadog_event_msg.concat(", Host_Name: #{host_name}")
         end
-        datadog_client.send_event(datadog_event)
+        datadog_client.send_event(datadog_event_msg, "ETL_JOB_STATUS", datadog_event_alert_type)
       end
 
       metrics.point(
