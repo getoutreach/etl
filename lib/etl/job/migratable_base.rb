@@ -54,6 +54,12 @@ module ETL::Job
         move = -1
       end
 
+      puts "goal_version: #{goal_version}"
+      puts "migration_dir: #{migration_dir}"
+      puts "id: #{id}"
+      puts "path: #{migration_dir}/#{id}_#{ETL::StringUtil.digit_str(goal_version)}.rb"
+
+
       # Raise error message if the target version migration doesnt exist
       raise "Migration for version #{goal_version} does not exist in #{migration_dir}" unless migration_files.include? "#{migration_dir}/#{id}_#{ETL::StringUtil.digit_str(goal_version)}.rb"
 
