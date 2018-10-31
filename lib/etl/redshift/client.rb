@@ -283,7 +283,7 @@ SQL
         # there can be multiple errors now since there are multiple files, but report the first one
         load_error = stl_load_errors(s3_filepath: full_s3_path).first
         details = stl_load_error_details(load_error[:query])
-        raise RedshiftSTLLoadError.new(load_error[:query], full_s3_path, load_error, details)
+        raise RedshiftSTLLoadError.new(load_error[:query], full_s3_path, details)
       end
       raise
     end
