@@ -16,6 +16,11 @@ module ETL
         @alter_table_commands << "#{command};"
       end
 
+      def copy_column(new_col, old_col)
+        command = "UPDATE #{@schema_name}.#{@table_name} SET #{new_col} = #{old_col};"
+        @alter_table_commands << command
+      end
+
       def drop_column(name)
         @alter_table_commands << "ALTER TABLE #{@schema_name}.#{@table_name} drop column #{name};"
       end
