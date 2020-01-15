@@ -8,6 +8,7 @@ module ETL
         {
           "NONE" => [],
           "RAW" => ["ALL"],  # no compression
+          "AZ64" => ["SMALLINT", "INTEGER", "BIGINT", "DECIMAL", "DATE", "TIMESTAMP", "TIMESTAMPTZ"],
           "BYTEDICT" => ["ALL" ], # supports all types except bool
           "DELTA"	=> ["SMALLINT", "INT", "BIGINT", "DATE", "TIMESTAMP", "DECIMAL"],
           "DELTA32K" => ["INT", "BIGINT", "DATE", "TIMESTAMP", "DECIMAL"],
