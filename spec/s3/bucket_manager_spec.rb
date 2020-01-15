@@ -14,8 +14,8 @@ RSpec.describe 's3' do
 
     def test_push(num_threads)
       s3_paths = []
-      bm = ::ETL::S3::BucketManager.new('test-s3-upload-bucket-1', 'us-west-2', num_threads)
-      s3_folder = SecureRandom.hex(8)
+      bm = ::ETL::S3::BucketManager.new(ETL.config.aws[:etl][:s3_bucket], ETL.config.aws[:etl][:region], num_threads)
+      s3_folder = "bucket_manager_test/#{SecureRandom.hex(8)}"
       begin
         csv_file_path1 = "valid_csv_1#{SecureRandom.hex(5)}"
         csv_file_path2 = "valid_csv_2#{SecureRandom.hex(5)}"
